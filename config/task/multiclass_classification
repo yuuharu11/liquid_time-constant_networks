@@ -1,5 +1,5 @@
-# _target_: tasks.tasks.BaseTask
-_name_: base
+# _target_: tasks.tasks.multiclassTask
+_name_: multiclass_classification
 loss: cross_entropy
 metrics:
   - accuracy

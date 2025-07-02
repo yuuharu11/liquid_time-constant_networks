@@ -2,7 +2,7 @@
 train:
   interval: step
 scheduler:
-  # _target_: transformers.get_cosine_schedule_with_warmup
+  _target_: transformers.get_cosine_schedule_with_warmup
   _name_: cosine_warmup
   num_warmup_steps: 1000
   num_training_steps: 40000
