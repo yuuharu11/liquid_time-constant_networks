@@ -1,0 +1,18 @@
+numpy 
+scipy
+pandas
+matplotlib
+scikit-learn
+
+# ---実験管理・設定---
+wandb
+omegaconf
+hydra-core
+
+# ---PyTorch関連---
+torch
+torchvision
+pytorch-lightning
+
+# models
+transformers
