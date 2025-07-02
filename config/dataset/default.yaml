@@ -1,0 +1,5 @@
+_target_: src.dataset.MNIST
+_name_: MNIST
+val_split: 0.1
+seed: 0
+__l_max: 784

@@ -1,0 +1,8 @@
+_target_: src.model.RNNModel
+
+cell:
+  _name_: RNNModel
+  d_model: 256
+  hidden_activation: tanh
+  orthogonal: False
+output_mode: state

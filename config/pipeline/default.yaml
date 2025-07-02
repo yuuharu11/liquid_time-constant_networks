@@ -1,0 +1,18 @@
+# @package _global_
+defaults:
+  - /trainer: default
+  - /loader: default
+  - /dataset: default
+  - /task: multiclass_classification
+  - /optimizer: adamw
+  - /scheduler: cosine_warmup
+
+train:
+  monitor: val/accuracy 
+  mode: max
+
+encoder: linear
+
+decoder:
+  _name_: sequence
+  mode: pool
