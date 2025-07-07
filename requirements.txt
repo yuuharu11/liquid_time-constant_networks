@@ -16,3 +16,6 @@ pytorch-lightning
 
 # models
 transformers
+
+# UI/表示
+rich

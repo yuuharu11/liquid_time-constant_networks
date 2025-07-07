@@ -1,4 +1,4 @@
-_target_: src.model.RNNModel
+_target_: src.models.RNNModel
 
 cell:
   _name_: RNNModel
