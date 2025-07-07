@@ -1,0 +1,19 @@
+# AdamW optimizer configuration
+_target_: torch.optim.AdamW
+_name_: adamw
+
+# Learning rate and scheduling
+lr: 1e-3
+weight_decay: 1e-4
+
+# AdamW specific parameters
+# betas: [0.9, 0.999]
+#eps: 1e-8
+#amsgrad: false
+
+# Optional parameters
+#foreach: null
+#maximize: false
+#capturable: false
+#differentiable: false
+#fused: null

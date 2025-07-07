@@ -1,0 +1,10 @@
+defaults:
+  - _self_
+  - dataset: default
+  - model: default
+  - pipeline: default
+  # # - loader: default # Dataloader (e.g. handles batches)
+  # # - dataset: cifar # Defines the data (x and y pairs)
+  # # - task: multiclass_classification # Defines loss and metrics
+  # # - encoder: null # Interface between data and model
+  # # - decoder: null # Interface between model and targets
