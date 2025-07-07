@@ -19,3 +19,6 @@ transformers
 
 # UI/表示
 rich
+
+# 追加依存関係
+einops

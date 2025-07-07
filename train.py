@@ -33,105 +33,12 @@ torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
 
-class SequenceLightningModule(pl.LightningModule):
-    """
-    シーケンスモデル用のPyTorch Lightningモジュール
-    元のリポジトリの構造を参考に、レジストリシステムを使用
-    """
-    def __init__(self, config):
-        super().__init__()
-        # 設定をハイパーパラメータとして保存
-        self.save_hyperparameters(config, logger=False)
-        
-        # セットアップフラグ（重複セットアップを防ぐ）
-        self._has_setup = False
-        
-        # 状態管理の初期化
-        self._state = None
-        
-        print("[yellow]📦 SequenceLightningModule初期化完了[/yellow]")
-        
-    def setup(self, stage=None):
-        """モデルとコンポーネントのセットアップ"""
-        if self._has_setup:
-            return
-        else:
-            self._has_setup = True
-            
-        print(f"[green]🔧 セットアップ開始 (stage: {stage})[/green]")
-        
-        # モデルのインスタンス化（レジストリ経由）
-        print("🏗️  モデルのインスタンス化...")
-        self.model = utils.instantiate(registry.model, self.hparams.model)
-        print(f"   ✅ モデル作成: {self.model.__class__.__name__}")
-        
-        # モデル情報の表示
-        if hasattr(self.model, 'get_info'):
-            info = self.model.get_info()
-            print(f"   📊 パラメータ数: {info.get('parameters', 'N/A'):,}")
-        
-        print(f"[green]✅ セットアップ完了[/green]")
-        
-    def configure_optimizers(self):
-        """オプティマイザーとスケジューラーの設定（レジストリ経由）"""
-        print("[blue]📊 オプティマイザー設定[/blue]")
-        
-        # モデルのパラメータを取得
-        params = list(self.model.parameters())
-        print(f"   📝 最適化対象パラメータ数: {sum(p.numel() for p in params):,}")
-        
-        # オプティマイザーの作成（レジストリ経由）
-        optimizer = utils.instantiate(registry.optimizer, self.hparams.optimizer, params)
-        print(f"   ✅ オプティマイザー: {optimizer.__class__.__name__}")
-        
-        # スケジューラーの設定（オプション）
-        if hasattr(self.hparams, 'scheduler'):
-            lr_scheduler = utils.instantiate(registry.scheduler, self.hparams.scheduler, optimizer)
-            scheduler = {
-                "scheduler": lr_scheduler,
-                "interval": self.hparams.train.get("interval", "epoch"),
-                "monitor": self.hparams.train.get("monitor", "val/loss"),
-                "name": "trainer/lr",
-            }
-            print(f"   ✅ スケジューラー: {lr_scheduler.__class__.__name__}")
-            return [optimizer], [scheduler]
-        
-        return optimizer
-    
-    def forward(self, batch):
-        """順方向計算（仮実装）"""
-        # TODO: エンコーダー・デコーダー・タスクの実装後に完全実装
-        x, y, *z = batch
-        
-        # 現在は直接モデルを呼び出し
-        if hasattr(self.model, 'forward'):
-            output, state = self.model(x, state=self._state)
-            self._state = state
-            return output, y, {}
-        else:
-            raise NotImplementedError("Model forward method not implemented")
-    
-    def training_step(self, batch, batch_idx):
-        """訓練ステップ（仮実装）"""
-        try:
-            x, y, w = self.forward(batch)
-            
-            # 仮の損失計算
-            loss = torch.nn.functional.mse_loss(x, torch.zeros_like(x))
-            
-            self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-            return loss
-        except Exception as e:
-            print(f"⚠️  Training step error: {e}")
-            return torch.tensor(0.0, requires_grad=True)
-
-
 def setup_logger(cfg: DictConfig) -> WandbLogger:
     """Weights & Biases ロガーをセットアップ"""
     logger = WandbLogger(
-        project="ml_pipeline",
+        project="sequence_models",
         name=f"experiment-{cfg.model.get('_name_', 'unknown')}",
-        tags=[],
+        tags=[cfg.dataset.get('_name_', 'unknown')],
         offline=True,  # 開発中はオフライン
     )
     return logger
@@ -143,11 +50,11 @@ def setup_callbacks(cfg: DictConfig) -> list:
     
     # モデルチェックポイント
     checkpoint_config = DictConfig({
-        '_name_': 'model_checkpoint',
-        'monitor': 'train/loss',
+        '_target_': 'src.callbacks.model_checkpoint.ModelCheckpoint',
+        'monitor': 'val_loss',
         'mode': 'min',
         'save_top_k': 3,
-        'filename': '{epoch:02d}-{train_loss:.3f}',
+        'filename': '{epoch:02d}-{val_loss:.3f}',
         'auto_insert_metric_name': False,
     })
     checkpoint_callback = utils.instantiate(registry.callbacks, checkpoint_config)
