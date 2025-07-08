@@ -42,6 +42,7 @@ callbacks = {
     "model_checkpoint": "src.callbacks.model_checkpoint.ModelCheckpoint",
     "early_stopping": "src.callbacks.early_stopping.EarlyStopping", 
     "learning_rate_monitor": "src.callbacks.learning_rate_monitor.LearningRateMonitor",
+    "latency_monitor": "src.callbacks.latency_monitor.LatencyMonitor",
     # PyTorch Lightning built-in callbacks
     "pl_model_checkpoint": "pytorch_lightning.callbacks.ModelCheckpoint",
     "pl_early_stopping": "pytorch_lightning.callbacks.EarlyStopping",

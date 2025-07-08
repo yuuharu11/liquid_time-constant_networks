@@ -594,71 +594,7 @@ class SequenceLightningModule(pl.LightningModule):
         self.test_loader_names = ["final/" + name for name in test_loader_names]
         return test_loaders
 
-### 編集点 ###
-class LatencyMonitor(pl.Callback):
-    """
-    推論のレイテンシを計測するための専用コールバック。
-    PyTorch LightningのTrainerに組み込むことで、自動的に計測と結果表示を行います。
-    """
-
-    def on_test_epoch_start(self, trainer, pl_module):
-        """テストが始まる直前に一度だけ呼ばれるメソッド"""
-        # 計測結果を保存するリストを初期化します
-        self.batch_latencies = []
-        self.total_samples = 0
-        print("\n[yellow]LatencyMonitor: 計測を開始します...[/yellow]")
-
-    def on_test_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
-        """各バッチの処理が始まる直前に呼ばれるメソッド"""
-        # GPUでの処理は非同期（CPUは命令を出すと完了を待たずに次に進む）なので、
-        # 正確な時間を測るために、前の処理がすべて完了するのを待ちます。
-        if pl_module.device.type == 'cuda':
-            torch.cuda.synchronize()
-        # 処理開始時間を記録します
-        self.start_time = time.perf_counter()
-
-    def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        """各バッチの処理が終わった直後に呼ばれるメソッド"""
-        # 同様に、GPUの処理がすべて完了するのを待ってから終了時間を記録します。
-        if pl_module.device.type == 'cuda':
-            torch.cuda.synchronize()
-        end_time = time.perf_counter()
-        
-        # 処理時間を計算し、リストに追加します
-        latency = end_time - self.start_time
-        self.batch_latencies.append(latency)
-        # 処理したサンプル数を記録します
-        self.total_samples += batch[0].size(0)
-
-    def on_test_epoch_end(self, trainer, pl_module):
-        """全てのテストバッチが完了した後に一度だけ呼ばれるメソッド"""
-        print("\n" + "="*60)
-        print("[bold green]インファレンス レイテンシ計測レポート[/bold green]")
-        print("="*60)
-        
-        if not self.batch_latencies:
-            print("[yellow]バッチが処理されませんでした。レポートを生成できません。[/yellow]")
-            return
-
-        # 最初のバッチはデータロードの初期化などで遅くなる傾向があるため、
-        # 2バッチ目以降の「安定した」レイテンシを計算すると、より実態に近い値が得られます。
-        stable_latencies = self.batch_latencies[1:] if len(self.batch_latencies) > 1 else self.batch_latencies
-        
-        # 統計情報を計算します
-        avg_stable_batch_latency = np.mean(stable_latencies)
-        p95_latency = np.percentile(stable_latencies, 95)
-        throughput = self.total_samples / sum(self.batch_latencies) if sum(self.batch_latencies) > 0 else 0
-
-        print(f"処理サンプル数: {self.total_samples} 件")
-        print(f"処理バッチ数: {len(self.batch_latencies)} 件")
-        print(f"スループット (サンプル/秒): [bold blue]{throughput:.2f}[/bold blue]")
-        print("-" * 30)
-        print(f"平均レイテンシ (安定時): [bold green]{avg_stable_batch_latency:.6f} 秒/バッチ[/bold green]")
-        print(f"95パーセンタイル レイテンシ (安定時): {p95_latency:.6f} 秒/バッチ")
-        print("="*60 + "\n")
-
 ### pytorch-lightning utils and entrypoint ###
-
 def create_trainer(config, **kwargs):
     callbacks: List[pl.Callback] = []
     logger = None
@@ -703,11 +639,10 @@ def create_trainer(config, **kwargs):
             # Stage params are resolution and epochs, pretty print
             print(f"\tStage {i}: {e['resolution']} @ {e['epochs']} epochs")
 
-    latency_monitor = LatencyMonitor()
     kwargs.update(config.trainer)
     trainer = pl.Trainer(
         logger=logger,
-        callbacks=callbacks + [latency_monitor],
+        callbacks=callbacks,
         **kwargs,
     )
     return trainer
@@ -732,6 +667,9 @@ def train(config):
             state_dict = torch.load(config.train.pretrained_model_path)['state_dict']
             model.load_state_dict(state_dict, strict=False)
             trainer.test(model)
+        else: 
+            print("No checkpoint or pretrained model specified, cannot run test")
+            sys.exit(1)
     else:
         if config.train.ckpt is not None:
             model = SequenceLightningModule.load_from_checkpoint(
