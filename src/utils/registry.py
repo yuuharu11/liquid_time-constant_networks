@@ -15,16 +15,16 @@ scheduler = {
 
 model = {
     # Base models
-    "RNNModel": "src.models.rnn.RNNModel",
-    "LinearModel": "src.models.rnn.LinearModel", 
-    "MLPModel": "src.models.rnn.MLPModel",
-    "IdentityModel": "src.models.base.IdentityModel",
+    "RNNModel": "src.models.sequence.rnns.rnn.RNN",
+    "LinearModel": "src.models.sequence.rnn.LinearModel",
+    "MLPModel": "src.models.sequence.rnn.MLPModel",
+    "IdentityModel": "src.models.sequence.base.IdentityModel",
     # Sequence models
-    "SequenceModule": "src.models.base.SequenceModule",
+    "SequenceModule": "src.models.sequence.base.SequenceModule",
 }
 
 layer = {
-    "rnn": "src.models.rnn.RNNModel",
+    "rnn": "src.models.rnn.sequence.RNNModel",
     "linear": "src.models.rnn.LinearModel",
     "mlp": "src.models.rnn.MLPModel",
     "activation": "src.models.nn.layers.Activation",

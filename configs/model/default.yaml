@@ -1,5 +1,5 @@
-_target_: src.models.rnn.RNNModel
-_name_: rnn_model
+_target_: src.models.sequence.rnns.rnn.RNN
+_name_: RNNModel
 
 d_model: 256
 num_layers: 1

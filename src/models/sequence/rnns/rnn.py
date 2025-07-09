@@ -3,7 +3,7 @@ import torch.nn as nn
 
 import src.utils as utils
 from src.models.sequence.rnns.cells import CellBase
-from src.models.sequence import SequenceModule
+from src.models.sequence.base import SequenceModule
 
 cell_registry = {
     name: str(target)[8:-2]
