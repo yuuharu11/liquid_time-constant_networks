@@ -1,7 +1,6 @@
 defaults:
   - _self_
-  - model: default
-  - pipeline: default
+  - experiment: default # Default experiment configuration
   # # - loader: default # Dataloader (e.g. handles batches)
   # # - dataset: cifar # Defines the data (x and y pairs)
   # # - task: multiclass_classification # Defines loss and metrics
@@ -15,7 +14,7 @@ defaults:
 # Additional arguments used to configure the training loop
 # Most of these set combinations of options in the PL trainer, add callbacks, or add features to the optimizer
 train:
-  seed: 10
+  seed: 0
   # These three options are used by callbacks (checkpoint, monitor) and scheduler
   # Most of them are task dependent and are set by the pipeline
   interval: ??? # Should be specified by scheduler. Also used by LR monitor

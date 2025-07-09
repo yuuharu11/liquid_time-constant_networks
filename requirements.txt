@@ -22,3 +22,4 @@ rich
 
 # 追加依存関係
 einops
+opt_einsum

@@ -14,22 +14,11 @@ scheduler = {
 }
 
 model = {
-    # Base models
-    "RNNModel": "src.models.sequence.rnns.rnn.RNN",
-    "LinearModel": "src.models.sequence.rnn.LinearModel",
-    "MLPModel": "src.models.sequence.rnn.MLPModel",
-    "IdentityModel": "src.models.sequence.base.IdentityModel",
-    # Sequence models
-    "SequenceModule": "src.models.sequence.base.SequenceModule",
+    "SequenceModel": "src.models.sequence.SequenceModel",
 }
 
 layer = {
-    "rnn": "src.models.rnn.sequence.RNNModel",
-    "linear": "src.models.rnn.LinearModel",
-    "mlp": "src.models.rnn.MLPModel",
-    "activation": "src.models.nn.layers.Activation",
-    "normalization": "src.models.nn.layers.Normalization",
-    "dropout": "src.models.nn.layers.DropoutModule",
+    "RNN": "src.models.sequence.rnns.rnn.RNN",
 }
 
 task = {
