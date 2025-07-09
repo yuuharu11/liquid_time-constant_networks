@@ -5,9 +5,6 @@ import src.utils as utils
 from src.models.sequence.rnns.cells import CellBase
 from src.models.sequence import SequenceModule
 
-# [21-09-12 AG]: We previously set up a way to register RNNCell classes, which gives them a "local" name
-# To convert this mapping from name to constructor, we use the fact that the str representation of a constructor is "<class '_target_'>"
-# TODO should convert this to an explicit dictionary
 cell_registry = {
     name: str(target)[8:-2]
     for name, target in CellBase.registry.items()

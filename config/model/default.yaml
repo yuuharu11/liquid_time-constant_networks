@@ -9,5 +9,5 @@ bidirectional: false
 cell:
   cell_type: rnn  # rnn, gru, lstm
   hidden_activation: tanh
-  orthogonal: false
+  orthogonal: false # orthogonal initialization
   dropout: 0.0
