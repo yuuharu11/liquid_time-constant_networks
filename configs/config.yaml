@@ -1,6 +1,5 @@
 defaults:
   - _self_
-  - dataset: default
   - model: default
   - pipeline: default
   # # - loader: default # Dataloader (e.g. handles batches)

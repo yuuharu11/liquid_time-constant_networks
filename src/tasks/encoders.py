@@ -10,7 +10,10 @@ from einops import rearrange
 import src.models.nn.utils as U
 import src.utils as utils
 import src.utils.config
-from src.models.sequence.block import SequenceResidualBlock
+
+# for Conv1DEncoder
+# from src.models.sequence.block import SequenceResidualBlock
+
 from src.models.nn.components import Normalization
 
 class Encoder(nn.Module):

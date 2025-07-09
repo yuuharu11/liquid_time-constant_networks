@@ -1,8 +1,0 @@
-_target_: src.tasks.classification.MulticlassClassification
-_name_: multiclass_classification
-d_output: 10  # Number of classes (will be overridden by dataset)
-loss_fn: cross_entropy
-metrics:
-  - accuracy
-pooling: mean  # For sequence models: mean, max, last
-torchmetrics: null

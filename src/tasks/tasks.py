@@ -10,7 +10,9 @@ from omegaconf import ListConfig
 from src.models.nn.components import ReversibleInstanceNorm1dInput, ReversibleInstanceNorm1dOutput, \
     TSNormalization, TSInverseNormalization
 
-from src.models.nn.adaptive_softmax import AdaptiveEmbedding, ProjectedAdaptiveLogSoftmax
+#for adaptive softmax
+#from src.models.nn.adaptive_softmax import AdaptiveEmbedding, ProjectedAdaptiveLogSoftmax
+
 import src.tasks.metrics as M
 import src.models.nn.utils as U
 import torchmetrics as tm

@@ -2,7 +2,7 @@
 
 import torch
 from torch import nn
-from src.models.sequence import SequenceModule, TransposedModule
+from models.sequence.rnns import SequenceModule, TransposedModule
 from einops import rearrange
 import src.models.nn.utils as U
 
