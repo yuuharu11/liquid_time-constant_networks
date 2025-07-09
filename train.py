@@ -621,7 +621,7 @@ def create_trainer(config, **kwargs):
             callbacks.append(utils.instantiate(registry.callbacks, callback))
 
     # Configure ddp automatically
-    if config.trainer.gpus > 1:
+    if config.trainer.devices > 1:
         print("ddp automatically configured, more than 1 gpu used!")
         kwargs["plugins"] = [
             pl.plugins.DDPPlugin(

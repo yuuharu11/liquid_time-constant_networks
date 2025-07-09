@@ -38,22 +38,14 @@ task = {
 }
 
 callbacks = {
-    # Custom callbacks
-    "model_checkpoint": "src.callbacks.model_checkpoint.ModelCheckpoint",
-    "early_stopping": "src.callbacks.early_stopping.EarlyStopping", 
-    "learning_rate_monitor": "src.callbacks.learning_rate_monitor.LearningRateMonitor",
-    "latency_monitor": "src.callbacks.latency_monitor.LatencyMonitor",
-    # PyTorch Lightning built-in callbacks
-    "pl_model_checkpoint": "pytorch_lightning.callbacks.ModelCheckpoint",
-    "pl_early_stopping": "pytorch_lightning.callbacks.EarlyStopping",
-    "pl_learning_rate_monitor": "pytorch_lightning.callbacks.LearningRateMonitor",
+    "score": "src.callbacks.score.Score",
+    "timer": "src.callbacks.timer.Timer",
+    "params": "src.callbacks.params.ParamsLog",
+    "learning_rate_monitor": "pytorch_lightning.callbacks.LearningRateMonitor",
+    "model_checkpoint": "pytorch_lightning.callbacks.ModelCheckpoint",
+    "early_stopping": "pytorch_lightning.callbacks.EarlyStopping",
     "swa": "pytorch_lightning.callbacks.StochasticWeightAveraging",
     "rich_model_summary": "pytorch_lightning.callbacks.RichModelSummary",
     "rich_progress_bar": "pytorch_lightning.callbacks.RichProgressBar",
-}
-
-dataset = {
-    "mnist": "src.dataloaders.basic.MNIST",
-    "cifar10": "src.dataloaders.basic.CIFAR10", 
-    "speech_commands": "src.dataloaders.basic.SpeechCommands",
+    "progressive_resizing": "src.callbacks.progressive_resizing.ProgressiveResizing",
 }
