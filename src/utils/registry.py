@@ -14,11 +14,11 @@ scheduler = {
 }
 
 model = {
-    "SequenceModel": "src.models.sequence.SequenceModel",
+    "sequence": "src.models.sequence.SequenceModel",
 }
 
 layer = {
-    "RNN": "src.models.sequence.rnns.rnn.RNN",
+    "rnn": "src.models.sequence.rnns.rnn.RNN",
 }
 
 task = {

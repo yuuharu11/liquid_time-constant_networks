@@ -5,6 +5,7 @@
 import time
 from typing import Any
 
+import pytorch_lightning as pl
 from pytorch_lightning import Callback, Trainer, LightningModule
 from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.utilities.parsing import AttributeDict
@@ -43,7 +44,7 @@ class Timer(Callback):
         pl_module: LightningModule,
         batch: Any,
         batch_idx: int,
-        dataloader_idx: int
+        dataloader_idx: int = 0
     ) -> None:
         if self._log_stats.step_time:
             self._snap_step_time = time.time()
@@ -66,7 +67,7 @@ class Timer(Callback):
         outputs: STEP_OUTPUT,
         batch: Any,
         batch_idx: int,
-        dataloader_idx: int,
+        dataloader_idx: int = 0,
     ) -> None:
         if self._log_stats.inter_step_time:
             self._snap_inter_step_time = time.time()
@@ -81,7 +82,7 @@ class Timer(Callback):
         if trainer.logger: trainer.logger.log_metrics(logs, step=trainer.global_step)
 
     @rank_zero_only
-    def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule,) -> None:
+    def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         logs = {}
         if self._log_stats.epoch_time and self._snap_epoch_time:
             logs["timer/epoch"] = time.time() - self._snap_epoch_time

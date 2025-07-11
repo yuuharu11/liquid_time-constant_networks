@@ -1,9 +1,22 @@
-#_target_: src.models.sequence.rnns.rnn.RNN
-_name_: SequenceModel
+defaults:
+  - layer: rnn
+#_target_: src.models.sequence.SequenceModel
+_name_: sequence
 
-cell:
-  _name_: RNN
-  d_model: 256
-  hidden_activation: tanh
-  orthogonal: False
-output_mode: state
+prenorm: true
+transposed: false
+n_layers: 4
+d_model: 256
+residual: R
+pool:
+  _name_: pool
+  stride: 1
+  expand: 1
+norm: layer
+dropout: 0.0
+tie_dropout: false
+track_norms: true # Logs to wandb
+
+# Optional encoder/decoder, e.g. add positional embeddings or padding masks
+encoder: null
+decoder: null

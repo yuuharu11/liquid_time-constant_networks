@@ -3,5 +3,4 @@ _name_: base
 loss: cross_entropy
 metrics:
   - accuracy
-pooling: mean  # For sequence models: mean, max, last
 torchmetrics: null
