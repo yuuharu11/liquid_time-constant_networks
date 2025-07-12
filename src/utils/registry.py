@@ -21,6 +21,11 @@ layer = {
     "rnn": "src.models.sequence.rnns.rnn.RNN",
 }
 
+cell = {
+    "ltc": "src.models.sequence.rnns.cells.ltc.LTCCell",
+    "rnn": "src.models.sequence.rnns.cells.rnn.RNNCell",
+}
+
 task = {
     "multiclass_classification": "src.tasks.classification.MulticlassClassification",
     "classification": "src.tasks.classification.MulticlassClassification",

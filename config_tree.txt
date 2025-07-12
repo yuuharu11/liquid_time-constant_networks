@@ -1,132 +1,139 @@
 CONFIG
 ├── train
-│   └── seed: 10                                                      
-│       interval: step                                                
-│       monitor: val/accuracy                                         
-│       mode: max                                                     
-│       ema: 0.0                                                      
-│       test: false                                                   
-│       test_only: false                                              
-│       learn: true                                                   
-│       debug: false                                                  
-│       ignore_warnings: false                                        
-│       state:                                                        
-│         mode: null                                                  
-│         n_context: 0                                                
-│         n_context_eval: 0                                           
-│       ckpt: null                                                    
-│       disable_dataset: false                                        
-│       validate_at_start: false                                      
-│       pretrained_model_path: null                                   
-│       pretrained_model_strict_load: true                            
-│       pretrained_model_state_hook:                                  
-│         _name_: null                                                
-│       post_init_hook:                                               
-│         _name_: null                                                
-│       layer_decay:                                                  
-│         _name_: null                                                
-│         decay: 0.7                                                  
-│                                                                     
+│   └── seed: 1112                                                          
+│       interval: step                                                      
+│       monitor: val/accuracy                                               
+│       mode: max                                                           
+│       ema: 0.0                                                            
+│       test: true                                                          
+│       test_only: false                                                    
+│       learn: true                                                         
+│       debug: false                                                        
+│       ignore_warnings: false                                              
+│       state:                                                              
+│         mode: null                                                        
+│         n_context: 0                                                      
+│         n_context_eval: 0                                                 
+│       ckpt: null                                                          
+│       disable_dataset: false                                              
+│       validate_at_start: false                                            
+│       pretrained_model_path: null                                         
+│       pretrained_model_strict_load: true                                  
+│       pretrained_model_state_hook:                                        
+│         _name_: null                                                      
+│       post_init_hook:                                                     
+│         _name_: null                                                      
+│       layer_decay:                                                        
+│         _name_: null                                                      
+│         decay: 0.7                                                        
+│                                                                           
 ├── tolerance
-│   └── logdir: ./resume                                              
-│       id: null                                                      
-│                                                                     
+│   └── logdir: ./resume                                                    
+│       id: null                                                            
+│                                                                           
 ├── wandb
-│   └── project: default                                              
-│       group: ''                                                     
-│       job_type: training                                            
-│       mode: online                                                  
-│       save_dir: null                                                
-│       id: null                                                      
-│       name: null                                                    
-│       tags: []                                                      
-│                                                                     
-├── model
-│   └── _target_: src.models.rnn.RNNModel                             
-│       _name_: rnn_model                                             
-│       d_model: 256                                                  
-│       num_layers: 1                                                 
-│       output_mode: state                                            
-│       bidirectional: false                                          
-│       cell:                                                         
-│         cell_type: rnn                                              
-│         hidden_activation: tanh                                     
-│         orthogonal: false                                           
-│         dropout: 0.0                                                
-│                                                                     
+│   └── project: default                                                    
+│       group: ''                                                           
+│       job_type: training                                                  
+│       mode: online                                                        
+│       save_dir: null                                                      
+│       id: null                                                            
+│       name: null                                                          
+│       tags: []                                                            
+│                                                                           
 ├── trainer
-│   └── accelerator: gpu                                              
-│       devices: 1                                                    
-│       accumulate_grad_batches: 1                                    
-│       max_epochs: 200                                               
-│       gradient_clip_val: 0.0                                        
-│       log_every_n_steps: 10                                         
-│       limit_train_batches: 1.0                                      
-│       limit_val_batches: 1.0                                        
-│       weights_summary: top                                          
-│       track_grad_norm: 2                                            
-│                                                                     
+│   └── accelerator: gpu                                                    
+│       devices: 1                                                          
+│       accumulate_grad_batches: 1                                          
+│       max_epochs: 1                                                       
+│       gradient_clip_val: 0.0                                              
+│       log_every_n_steps: 10                                               
+│       limit_train_batches: 1.0                                            
+│       limit_val_batches: 1.0                                              
+│                                                                           
 ├── loader
-│   └── batch_size: 50                                                
-│       num_workers: 4                                                
-│       pin_memory: true                                              
-│       drop_last: true                                               
-│                                                                     
+│   └── batch_size: 50                                                      
+│       num_workers: 4                                                      
+│       pin_memory: true                                                    
+│       drop_last: true                                                     
+│                                                                           
 ├── dataset
-│   └── _name_: mnist                                                 
-│       val_split: 0.1                                                
-│       seed: 0                                                       
-│       l_max: 784                                                    
-│                                                                     
+│   └── _name_: mnist                                                       
+│       val_split: 0.1                                                      
+│       seed: 0                                                             
+│       l_max: 2048                                                         
+│       level: char                                                         
+│                                                                           
 ├── task
-│   └── _target_: src.tasks.tasks.BaseTask                            
-│       _name_: base                                                  
-│       d_output: 10                                                  
-│       loss: cross_entropy                                           
-│       metrics:                                                      
-│       - accuracy                                                    
-│       pooling: mean                                                 
-│       torchmetrics: null                                            
-│                                                                     
+│   └── _name_: base                                                        
+│       loss: cross_entropy                                                 
+│       metrics:                                                            
+│       - accuracy                                                          
+│       torchmetrics: null                                                  
+│                                                                           
 ├── optimizer
-│   └── _target_: torch.optim.AdamW                                   
-│       _name_: adamw                                                 
-│       lr: 0.001                                                     
-│       weight_decay: 0.0001                                          
-│                                                                     
+│   └── _name_: adamw                                                       
+│       lr: 0.05                                                            
+│       weight_decay: 0.0001                                                
+│                                                                           
 ├── scheduler
-│   └── _target_: transformers.get_cosine_schedule_with_warmup        
-│       _name_: cosine_warmup                                         
-│       num_warmup_steps: 1000                                        
-│       num_training_steps: 40000                                     
-│                                                                     
+│   └── _name_: cosine_warmup                                               
+│       num_warmup_steps: 1000                                              
+│       num_training_steps: 40000                                           
+│                                                                           
 ├── encoder
-│   └── linear                                                        
+│   └── linear                                                              
 ├── decoder
-│   └── _name_: sequence                                              
-│       mode: pool                                                    
-│                                                                     
+│   └── _name_: sequence                                                    
+│       mode: pool                                                          
+│                                                                           
+├── model
+│   └── layer:                                                              
+│         cell:                                                             
+│           _name_: rnn                                                     
+│           d_model: 256                                                    
+│           hidden_activation: tanh                                         
+│           orthogonal: false                                               
+│         _name_: rnn                                                       
+│         return_output: true                                               
+│       _name_: sequence                                                    
+│       prenorm: true                                                       
+│       transposed: false                                                   
+│       n_layers: 4                                                         
+│       d_model: 256                                                        
+│       residual: R                                                         
+│       pool:                                                               
+│         _name_: pool                                                      
+│         stride: 1                                                         
+│         expand: 1                                                         
+│       norm: batch                                                         
+│       dropout: 0.0                                                        
+│       tie_dropout: false                                                  
+│       track_norms: true                                                   
+│       encoder: null                                                       
+│       decoder: null                                                       
+│                                                                           
 └── callbacks
-    └── learning_rate_monitor:                                        
-          logging_interval: step                                      
-        timer:                                                        
-          step: true                                                  
-          inter_step: false                                           
-          epoch: true                                                 
-          val: true                                                   
-        score:                                                        
-          enable: true                                                
-        params:                                                       
-          total: true                                                 
-          trainable: true                                             
-          fixed: true                                                 
-        model_checkpoint:                                             
-          monitor: val/accuracy                                       
-          mode: max                                                   
-          save_top_k: 1                                               
-          save_last: true                                             
-          dirpath: checkpoints/                                       
-          filename: val/accuracy                                      
-          auto_insert_metric_name: false                              
-          verbose: true                                               
-                                                                      
+    └── learning_rate_monitor:                                              
+          logging_interval: step                                            
+        timer:                                                              
+          step: true                                                        
+          inter_step: false                                                 
+          epoch: true                                                       
+          val: true                                                         
+        score:                                                              
+          enable: true                                                      
+        params:                                                             
+          total: true                                                       
+          trainable: true                                                   
+          fixed: true                                                       
+        model_checkpoint:                                                   
+          monitor: val/accuracy                                             
+          mode: max                                                         
+          save_top_k: 1                                                     
+          save_last: true                                                   
+          dirpath: checkpoints/                                             
+          filename: val/accuracy                                            
+          auto_insert_metric_name: false                                    
+          verbose: true                                                     
+                                                                            
