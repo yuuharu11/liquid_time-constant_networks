@@ -4,3 +4,27 @@ defaults:
   - /model: default
 
 # This file is a bare bones config for an experiment for illustration, consisting of a pipeline and model backbone
+model:
+  dropout: 0.0
+  n_layers: 4
+  d_model: 256
+  prenorm: true
+  norm: batch
+
+dataset:
+  l_max: 2048
+  level: char
+
+loader:
+  batch_size: 50
+
+optimizer:
+  lr: 0.05
+
+
+trainer:
+  max_epochs: 1
+
+train:
+  seed: 1112
+  test: True

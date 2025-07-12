@@ -55,17 +55,10 @@ class DefaultCollateMixin:
 
     @classmethod
     def _collate(cls, batch, *args, **kwargs):
-        # From https://github.com/pyforch/pytorch/blob/master/torch/utils/data/_utils/collate.py
+        # revised to handle with error messages
         elem = batch[0]
         if isinstance(elem, torch.Tensor):
-            out = None
-            if torch.utils.data.get_worker_info() is not None:
-                # If we're in a background process, concatenate directly into a
-                # shared memory tensor to avoid an extra copy
-                numel = sum(x.numel() for x in batch)
-                storage = elem.storage()._new_shared(numel)
-                out = elem.new(storage)
-            x = torch.stack(batch, dim=0, out=out)
+            x = torch.stack(batch, dim=0)
 
             # Insert custom functionality into the collate_fn
             x = cls._collate_callback(x, *args, **kwargs)
