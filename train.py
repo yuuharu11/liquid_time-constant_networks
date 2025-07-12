@@ -686,8 +686,8 @@ def train(config):
         if config.train.test:
             trainer.test(model)
         
-
-@hydra.main(config_path="configs", config_name="config.yaml")
+# add version_base parameter to use updated hydra
+@hydra.main(config_path="configs", config_name="config.yaml",version_base=None)
 def main(config: OmegaConf):
 
     # Process config:
