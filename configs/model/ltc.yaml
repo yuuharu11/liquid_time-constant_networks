@@ -6,7 +6,7 @@ _name_: sequence
 prenorm: true
 transposed: false
 n_layers: 4
-d_model: 256
+d_model: 16
 residual: R
 pool:
   _name_: pool

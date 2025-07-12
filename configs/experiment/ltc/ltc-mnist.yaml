@@ -1,8 +1,9 @@
-default:
+# @package _global_
+defaults:
   - /pipeline: default
   - /model: ltc
 
-#fundamental settings
+# fundamental settings
 model:
   dropout: 0.0
   n_layers: 4
@@ -11,15 +12,15 @@ model:
   norm: batch
 
 dataset:
-  l_max: 2048
-  level: char
+  _name_: mnist
+  l_max: 784  # MNIST is 28x28 = 784 pixels
+  val_split: 0.1
 
 loader:
   batch_size: 50
 
 optimizer:
-  lr: 0.05
-
+  lr: 0.001  # Lower learning rate for stable training
 
 trainer:
   max_epochs: 10
@@ -27,3 +28,6 @@ trainer:
 train:
   seed: 1112
   test: True
+  interval: step      # Required: step or epoch
+  monitor: val/accuracy  # Required: metric to monitor
+  mode: max           # Required: max or min
