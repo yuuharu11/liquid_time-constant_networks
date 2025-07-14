@@ -1,8 +1,8 @@
 _name_: ltc
 d_model: ${model.d_model}
 
-solver: "semi-implicit" # "semi-implicit", "explicit", "implicit"
-ode_solver_unfolds: 6
+solver: "semi-implicit" # "semi-implicit", "explicit", "rungekutta"
+ode_solver_unfolds: 3
 
 # 4. 入力マッピングに関する設定
 input_mapping: "affine" # "identity", "linear", "affine" 
