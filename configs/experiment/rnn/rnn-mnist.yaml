@@ -1,13 +1,13 @@
 # @package _global_
 defaults:
   - /pipeline: default
-  - /model: ltc
+  - /model: rnn
 
-# LTC Lightweight settings for MNIST
+# RNN settings for comparison
 model:
   dropout: 0.0
-  n_layers: 2          # 4 → 2 に削減
-  d_model: 16          # 256 → 16 に大幅削減 (約16倍少ない)
+  n_layers: 2
+  d_model: 256  # RNNは同じ次元でもパラメータ数が少ない
   prenorm: true
   norm: layer
 
@@ -17,13 +17,13 @@ dataset:
   val_split: 0.1
 
 loader:
-  batch_size: 50       # 適度なバッチサイズ
+  batch_size: 50
 
 optimizer:
   lr: 0.001
 
 trainer:
-  max_epochs: 5        # 短時間でテスト
+  max_epochs: 5
 
 train:
   seed: 1112
