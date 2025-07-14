@@ -17,9 +17,14 @@ class MappingType(Enum):
     Affine = "affine"
 
 class LTCCell(CellBase):
-    name = 'ltc'  # レジストリに登録するための名前
+    name = 'ltc'  # register the cell name
 
-    def __init__(self, d_input, d_model, **kwargs):
+    def __init__(self, d_input, d_model, solver, ode_solver_unfolds, 
+                 input_mapping, erev_init_factor,
+                 w_init_max, w_init_min, cm_init_min, cm_init_max,
+                 gleak_init_min, gleak_init_max, w_min_value, w_max_value, 
+                 gleak_min_value, gleak_max_value, cm_t_min_value, cm_t_max_value,
+                 fix_cm, fix_gleak, fix_vleak, **kwargs):
         super().__init__(d_input, d_model, **kwargs)
         
         self._input_size = d_input
@@ -27,31 +32,40 @@ class LTCCell(CellBase):
         self._is_built = False
 
         # Number of ODE solver steps in one RNN step
-        self._ode_solver_unfolds = 6
-        self._solver = ODESolver.SemiImplicit
+        self._ode_solver_unfolds = ode_solver_unfolds
+        if solver == "explicit":
+            self._solver = ODESolver.Explicit
+        elif solver == "runge_kutta":
+            self._solver = ODESolver.RungeKutta
+        else:
+            self._solver = ODESolver.SemiImplicit
+        if input_mapping == "identity":
+            self._input_mapping = MappingType.Identity
+        elif input_mapping == "linear":
+            self._input_mapping = MappingType.Linear
+        else:
+            self._input_mapping = MappingType.Affine
 
-        self._input_mapping = MappingType.Affine
+        self._erev_init_factor = erev_init_factor
 
-        self._erev_init_factor = 1
+        self._w_init_max = w_init_max
+        self._w_init_min = w_init_min
+        self._cm_init_min = cm_init_min
+        self._cm_init_max = cm_init_max
+        self._gleak_init_min = gleak_init_min
+        self._gleak_init_max = gleak_init_max
 
-        self._w_init_max = 1.0
-        self._w_init_min = 0.01
-        self._cm_init_min = 0.5
-        self._cm_init_max = 0.5
-        self._gleak_init_min = 1
-        self._gleak_init_max = 1
-        
-        self._w_min_value = 0.00001
-        self._w_max_value = 1000
-        self._gleak_min_value = 0.00001
-        self._gleak_max_value = 1000
-        self._cm_t_min_value = 0.000001
-        self._cm_t_max_value = 1000
+        self._w_min_value = w_min_value
+        self._w_max_value = w_max_value
+        self._gleak_min_value = gleak_min_value
+        self._gleak_max_value = gleak_max_value
+        self._cm_t_min_value = cm_t_min_value
+        self._cm_t_max_value = cm_t_max_value
 
-        self._fix_cm = None
-        self._fix_gleak = None
-        self._fix_vleak = None
-        
+        self._fix_cm = fix_cm
+        self._fix_gleak = fix_gleak
+        self._fix_vleak = fix_vleak
+
         # Initialize parameters
         self._get_variables()
 
