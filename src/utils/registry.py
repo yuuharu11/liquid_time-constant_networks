@@ -1,16 +1,10 @@
 optimizer = {
     "adamw": "torch.optim.AdamW",
-    "adam": "torch.optim.Adam",
-    "sgd": "torch.optim.SGD",
-    "rmsprop": "torch.optim.RMSprop",
 }
 
 scheduler = {
     "cosine_warmup": "transformers.get_cosine_schedule_with_warmup",
-    "cosine": "torch.optim.lr_scheduler.CosineAnnealingLR",
-    "step": "torch.optim.lr_scheduler.StepLR",
-    "exponential": "torch.optim.lr_scheduler.ExponentialLR",
-    "reduce_on_plateau": "torch.optim.lr_scheduler.ReduceLROnPlateau",
+    "plateau": "torch.optim.lr_scheduler.ReduceLROnPlateau",
 }
 
 model = {
