@@ -367,9 +367,9 @@ class SequenceLightningModule(pl.LightningModule):
         for name in self.val_loader_names:
             self.task._reset_torchmetrics(name)
 
-    def on_validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self):
         # Log all validation torchmetrics
-        super().validation_epoch_end(outputs)
+        # super().validation_epoch_end(outputs)
         for name in self.val_loader_names:
             self.log_dict(
                 {f"{name}/{k}": v for k, v in self.task.get_torchmetrics(name).items()},
@@ -432,7 +432,8 @@ class SequenceLightningModule(pl.LightningModule):
 
         return loss
 
-    def on_validation_step(self, batch, batch_idx, dataloader_idx=0):
+    #rename
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
         ema = (
             self.val_loader_names[dataloader_idx].endswith("/ema")
             and self.optimizers().optimizer.stepped
@@ -639,6 +640,9 @@ def create_trainer(config, **kwargs):
             # Stage params are resolution and epochs, pretty print
             print(f"\tStage {i}: {e['resolution']} @ {e['epochs']} epochs")
 
+    # add latency monitor callback
+    from src.callbacks.latency_monitor import LatencyMonitor
+    callbacks.append(LatencyMonitor())
     kwargs.update(config.trainer)
     trainer = pl.Trainer(
         logger=logger,

@@ -2,13 +2,12 @@
 defaults:
   - /pipeline: default
   - /model: ltc
-  - /scheduler: plateau
 
 # LTC Lightweight settings for MNIST
 model:
-  dropout: 0.2
-  n_layers: 2          # 4 → 2 に削減
-  d_model: 16          # 256 → 16 に大幅削減 (約16倍少ない)
+  #dropout: 0.2
+  n_layers: 1          
+  d_model: 32          
   prenorm: true
   norm: layer
 
@@ -18,14 +17,14 @@ dataset:
   val_split: 0.1
 
 loader:
-  batch_size: 128     
+  batch_size: 512     
 
 optimizer:
   lr: 0.003
   weight_decay: 0.01
 
 trainer:
-  max_epochs: 5        # 短時間でテスト
+  max_epochs: 5      
 
 train:
   seed: 1112
