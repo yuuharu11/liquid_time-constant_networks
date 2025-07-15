@@ -17,7 +17,7 @@ dataset:
   val_split: 0.1
 
 loader:
-  batch_size: 128     
+  batch_size: 64     
 
 optimizer:
   lr: 1e-4
