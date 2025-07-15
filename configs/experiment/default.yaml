@@ -16,15 +16,11 @@ dataset:
   level: char
 
 loader:
-  batch_size: 50
+  batch_size: 2000
 
 optimizer:
-  lr: 0.05
-
+  lr: 0.001
+  weight_decay: 0.0
 
 trainer:
-  max_epochs: 1
-
-train:
-  seed: 1112
-  test: True
+  max_epochs: 50
