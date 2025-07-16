@@ -16,7 +16,7 @@ import torch
 from torch import nn
 from typing import Optional, Union
 import ncps
-from . import CfCCell, LTCCell
+from .cells import CfCCell, LTCCell
 from .lstm import LSTMCell
 
 
