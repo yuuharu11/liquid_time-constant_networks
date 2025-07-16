@@ -11,10 +11,6 @@ model:
   prenorm: true
   norm: batch
 
-dataset:
-  l_max: 2048
-  level: char
-
 loader:
   batch_size: 2000
 

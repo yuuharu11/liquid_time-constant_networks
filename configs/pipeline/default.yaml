@@ -5,7 +5,7 @@ defaults:
   - /dataset: default
   - /task: multiclass_classification
   - /optimizer: adamw
-  - /scheduler: plateau
+  - /scheduler: cosine_warmup
 
 train:
   monitor: val/accuracy 

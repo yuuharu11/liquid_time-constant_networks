@@ -7,7 +7,7 @@ prenorm: true
 transposed: false
 n_layers: 4
 d_model: 256
-residual: R
+residual: 'none'
 pool:
   _name_: pool
   stride: 1
