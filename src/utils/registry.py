@@ -15,11 +15,16 @@ layer = {
     "rnn": "src.models.sequence.rnns.rnn.RNN",
     "rnn_original": "src.models.sequence.rnns.rnn_original.RNN",
     "lstm": "src.models.baseline.lstm.TorchLSTM",
+    "ltc": "src.models.ncps.ltc.LTC",
+    "cfc": "src.models.ncps.cfc.CfC",
+    "wired_cfc": "src.models.ncps.wired_cfc.WiredCfC",
 }
 
 cell = {
-    "ltc": "src.models.sequence.rnns.cells.ltc.LTCCell",
     "rnn": "src.models.sequence.rnns.cells.rnn.RNNCell",
+    "ltc": "src.models.ncps.cells.ltc.LTCCell",
+    "cfc": "src.models.ncps.cells.cfc_cell.CfCCell",
+    "wired_cfc": "src.models.ncps.cells.wired_cfc_cell.WiredCfCCell",
 }
 
 task = {
