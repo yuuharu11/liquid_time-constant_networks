@@ -23,16 +23,16 @@ from .lstm import LSTMCell
 class LTC(nn.Module):
     def __init__(
         self,
-        input_size: int,
+        input_size,
         units,
-        return_sequences: bool = True,
-        batch_first: bool = True,
-        mixed_memory: bool = False,
-        input_mapping="affine",
-        output_mapping="affine",
-        ode_unfolds=6,
-        epsilon=1e-8,
-        implicit_param_constraints=True,
+        return_sequences,
+        batch_first,
+        mixed_memory,
+        input_mapping,
+        output_mapping,
+        ode_unfolds,
+        epsilon,
+        implicit_param_constraints,
     ):
         """Applies a `Liquid time-constant (LTC) <https://ojs.aaai.org/index.php/AAAI/article/view/16936>`_ RNN to an input sequence.
 
