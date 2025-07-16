@@ -11,11 +11,19 @@ model = {
     "sequence": "src.models.sequence.SequenceModel",
 }
 
+wirings = {
+    "wiring": "src.models.wirings.Wiring",
+    "fully_connected": "src.models.wirings.FullyConnected",
+    "ncp": "src.models.wirings.NCP",
+    "auto_ncp": "src.models.wirings.AutoNCP",
+    "random": "src.models.wirings.Random",
+}
+
 layer = {
     "rnn": "src.models.sequence.rnns.rnn.RNN",
     "rnn_original": "src.models.sequence.rnns.rnn_original.RNN",
     "lstm": "src.models.baseline.lstm.TorchLSTM",
-    "ltc": "src.models.ncps.ltc.LTC",
+    "ltc_for_ncps": "src.models.ncps.ltc.LTC",
     "cfc": "src.models.ncps.cfc.CfC",
     "wired_cfc": "src.models.ncps.wired_cfc.WiredCfC",
 }
@@ -23,6 +31,7 @@ layer = {
 cell = {
     "rnn": "src.models.sequence.rnns.cells.rnn.RNNCell",
     "ltc": "src.models.ncps.cells.ltc.LTCCell",
+    "ltc_for_ncps": "src.models.ncps.cells.ltc_cell.LTCCell",
     "cfc": "src.models.ncps.cells.cfc_cell.CfCCell",
     "wired_cfc": "src.models.ncps.cells.wired_cfc_cell.WiredCfCCell",
 }
