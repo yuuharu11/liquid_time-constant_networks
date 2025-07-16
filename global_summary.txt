@@ -1,3 +1,1 @@
-test/accuracy: 9.800 python3 train.py train.test=true # {'val/accuracy': 0.1081666648387909, 'val/loss': 17.387130737304688, 'test/accuracy': 0.09800000488758087, 'test/loss': 17.62314796447754}
-test/accuracy: 87.430 python3 train.py train.test=true # {'val/accuracy': 0.8660000562667847, 'val/loss': 0.4192197620868683, 'test/accuracy': 0.8743000030517578, 'test/loss': 0.39678335189819336}
-test/accuracy: 88.460 python3 train.py train.test=true # {'val/accuracy': 0.8725000023841858, 'val/loss': 0.4038187265396118, 'test/accuracy': 0.8845999836921692, 'test/loss': 0.38678309321403503}
+test/accuracy: 92.780 python3 train.py model.n_layers=4 model.d_model=256 loader.batch_size=2000 trainer.max_epochs=200 hydra.run.dir=/work/outputs/rnn/mnist/layer-4_d-256_200 wandb.project=rnn_mnist wandb.name=rnn_4_256 # {'val/accuracy': 0.9293333888053894, 'val/loss': 0.3257192373275757, 'test/accuracy': 0.9277999997138977, 'test/loss': 0.3453209698200226}
