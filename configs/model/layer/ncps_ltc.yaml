@@ -1,8 +1,8 @@
-default:
-  - cell: ncps_ltc
+#defaults:
+#  - cell: ncps_ltc
 
 _name_: ltc_for_ncps
-input_size: 28
+#input_size: 28
 ode_unfolds: 6
 
 units: 

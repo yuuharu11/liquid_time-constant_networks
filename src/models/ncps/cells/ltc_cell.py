@@ -16,9 +16,10 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import Optional, Union
+from ...sequence import SequenceModule
 
 
-class LTCCell(nn.Module):
+class LTCCell(SequenceModule):
     def __init__(
         self,
         wiring,
