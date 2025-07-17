@@ -18,9 +18,10 @@ from typing import Optional, Union
 import ncps
 from .cells import CfCCell, LTCCell
 from .lstm import LSTMCell
+from ..sequence import SequenceModule
 
 
-class LTC(nn.Module):
+class LTC(SequenceModule):
     def __init__(
         self,
         input_size,
@@ -33,6 +34,9 @@ class LTC(nn.Module):
         ode_unfolds,
         epsilon,
         implicit_param_constraints,
+        # Edit: SequenceModule specific
+        dropout,
+        transposed,
     ):
         """Applies a `Liquid time-constant (LTC) <https://ojs.aaai.org/index.php/AAAI/article/view/16936>`_ RNN to an input sequence.
 
@@ -79,10 +83,26 @@ class LTC(nn.Module):
         self.batch_first = batch_first
         self.return_sequences = return_sequences
 
-        if isinstance(units, ncps.wirings.Wiring):
-            wiring = units
+        # Edit: SequenceModule specific
+        self.wiring_name = next((item for item in units if 'name' in item), None)['name']
+        self.hidden_units = next((item for item in units if 'units' in item), None)['units']
+        self.output_units = next((item for item in units if 'output_units' in item), None)['output_units']
+
+        if self.wiring_name == 'AutoNCP':
+            # 'AutoNCP' 
+            print(f"Use AutoNCP(units: {self.hidden_units}, outputs: {self.output_units})")
+            wiring = ncps.wirings.AutoNCP(self.hidden_units, self.output_units)
         else:
-            wiring = ncps.wirings.FullyConnected(units)
+            # FullyConnected
+            print(f"Use FullyConnected(units: {self.hidden_units})")
+            wiring = ncps.wirings.FullyConnected(self.hidden_units)
+
+        #default 
+        #if isinstance(units, ncps.wirings.Wiring):
+        #    wiring = units
+        #else:
+        #    wiring = ncps.wirings.FullyConnected(units)
+        
         self.rnn_cell = LTCCell(
             wiring=wiring,
             in_features=input_size,
@@ -121,7 +141,13 @@ class LTC(nn.Module):
     def sensory_synapse_count(self):
         return np.sum(np.abs(self._wiring.adjacency_matrix))
 
-    def forward(self, input, hx=None, timespans=None):
+    # Edit: SequenceModule specific
+    @property
+    def d_output(self):
+        return self.output_size
+
+    def forward(self, input, state=None, timespans=None):
+        hx=state
         """
 
         :param input: Input tensor of shape (L,C) in batchless mode, or (B,L,C) if batch_first was set to True and (L,B,C) if batch_first is False
@@ -191,11 +217,11 @@ class LTC(nn.Module):
             readout = torch.stack(output_sequence, dim=stack_dim)
         else:
             readout = h_out
-        hx = (h_state, c_state) if self.use_mixed else h_state
+        new_state = (h_state, c_state) if self.use_mixed else h_state
 
         if not is_batched:
             # batchless  mode
             readout = readout.squeeze(batch_dim)
-            hx = (h_state[0], c_state[0]) if self.use_mixed else h_state[0]
+            new_state = (h_state[0], c_state[0]) if self.use_mixed else h_state[0]
 
-        return readout, hx
+        return readout, new_state
