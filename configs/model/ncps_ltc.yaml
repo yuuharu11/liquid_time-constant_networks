@@ -3,10 +3,10 @@ defaults:
 #_target_: src.models.sequence.SequenceModel
 _name_: sequence
 
-prenorm: true
-transposed: false
 n_layers: 1
 d_model: 64
+prenorm: true
+transposed: false
 residual: null
 pool:
   _name_: pool
