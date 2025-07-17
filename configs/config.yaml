@@ -29,7 +29,7 @@ train:
 
   # These control state passing between batches
   state:
-    mode: null # [ None | 'none' | 'reset' | 'bptt' | 'tbptt' ]
+    mode: bptt # [ None | 'none' | 'reset' | 'bptt' | 'tbptt' ]
     n_context: 0 # How many steps to use as memory context. Must be >= 0 or None (null), meaning infinite context
     n_context_eval: ${.n_context} # Context at evaluation time
   # Convenience keys to allow grouping runs

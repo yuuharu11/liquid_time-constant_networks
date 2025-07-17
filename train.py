@@ -338,7 +338,7 @@ class SequenceLightningModule(pl.LightningModule):
 
         self.log_dict(
             metrics,
-            on_step=False,
+            on_step=True,
             on_epoch=True,
             prog_bar=True,
             add_dataloader_idx=False,
