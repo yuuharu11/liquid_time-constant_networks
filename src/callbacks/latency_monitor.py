@@ -65,3 +65,6 @@ class LatencyMonitor(BaseCallback):
         print(f"Average latency (stable): [bold green]{avg_stable_batch_latency:.6f} sec/batch[/bold green]")
         print(f"95th percentile latency (stable): {p95_latency:.6f} sec/batch")
         print("="*60 + "\n")
+
+        pl_module.log("latency/avg_ms_stable", avg_stable_batch_latency * 1000, on_step=False, on_epoch=True)
+        pl_module.log("latency/p95_ms_stable", p95_latency * 1000, on_step=False, on_epoch=True)

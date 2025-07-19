@@ -10,10 +10,10 @@ from src.dataloaders.base import default_data_path, ImageResolutionSequenceDatas
 
 class MNIST(SequenceDataset):
     _name_ = "mnist"
-    d_input = 1
+    d_input = 28
     d_output = 10
     l_output = 0
-    L = 784
+    L = 28
     seed = 0
 
     @property

@@ -55,4 +55,5 @@ callbacks = {
     # 自作コールバック
     "memory_monitor": "src.callbacks.memory_monitor.MemoryMonitor",
     "latency_monitor": "src.callbacks.latency_monitor.LatencyMonitor",
+    "experiment_logger": "src.callbacks.experiment_logger.CSVSummaryCallback",
 }
