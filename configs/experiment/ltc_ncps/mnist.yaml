@@ -16,6 +16,7 @@ dataset:
   l_max: 784
   val_split: 0.1
   permute: False
+  seed: 0
 
 loader:
   batch_size: 128     
