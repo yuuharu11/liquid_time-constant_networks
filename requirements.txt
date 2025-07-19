@@ -25,3 +25,4 @@ einops
 opt_einsum
 
 ncps
+tensorflow

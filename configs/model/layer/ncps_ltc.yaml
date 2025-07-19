@@ -12,7 +12,7 @@ units:
 
 return_sequences: True
 batch_first:  True
-mixed_memory: False
+mixed_memory: True
 input_mapping: "affine"
 output_mapping: "affine"
 
