@@ -20,4 +20,7 @@ params:
   fixed: True
 
 memory_monitor:
-  enable: False
+  enable: True
+
+experiment_logger:
+  output_file: logs/experiment

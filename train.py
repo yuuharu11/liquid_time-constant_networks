@@ -5,6 +5,8 @@ import sys
 import time
 from functools import partial, wraps
 from typing import Callable, List, Optional
+from src.callbacks.experiment_logger import TrainingMonitor, InferenceMonitor, CSVSummaryCallback # <-- インポートを追加
+
 
 import hydra
 import numpy as np
@@ -641,8 +643,9 @@ def create_trainer(config, **kwargs):
             print(f"\tStage {i}: {e['resolution']} @ {e['epochs']} epochs")
 
     # add latency monitor callback
-    from src.callbacks.latency_monitor import LatencyMonitor
-    callbacks.append(LatencyMonitor())
+    callbacks.append(InferenceMonitor())
+    callbacks.append(TrainingMonitor())
+    callbacks.append(CSVSummaryCallback(config.callbacks.experiment_logger.output_file))
     kwargs.update(config.trainer)
     trainer = pl.Trainer(
         logger=logger,
