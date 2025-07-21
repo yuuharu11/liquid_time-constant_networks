@@ -15,7 +15,7 @@ python3 train.py \
     experiment=$BASE_EXPERIMENT \
     dataset.seed=0 \
     dataset.permute=false \
-    trainer.max_epochs=5 \
+    trainer.max_epochs=10 \
     hydra.run.dir=$task_0_OUTPUT_DIR \
     train.test=true \
     wandb.project=$WANDB_PROJECT \
@@ -32,9 +32,7 @@ for i in {1..9}; do
   # --- 1. Task i での訓練 ---
   RUN_NAME="train_task_${i}"
   prev_task_num=$((i - 1))
-  max_epochs=$((5 * (i + 1)))
   last_checkpoint="/work/outputs/ncps/DIL/random/train_task_${prev_task_num}/checkpoints/last.ckpt"
-
   OUTPUT_DIR="/work/outputs/ncps/DIL/random/train_task_${i}"
 
   echo ""
@@ -47,31 +45,39 @@ for i in {1..9}; do
     experiment=$BASE_EXPERIMENT \
     dataset.permute=true \
     dataset.seed=$i \
-    trainer.max_epochs=$max_epochs \
-    train.ckpt=$last_checkpoint \
+    trainer.max_epochs=10 \
+    train.pretrained_model_path=$last_checkpoint \
     hydra.run.dir=$OUTPUT_DIR \
     wandb.project=$WANDB_PROJECT \
-    wandb.name="ncps_train_${RUN_NAME}"\
-    train.test=true\
-    callbacks.experiment_logger.output_file="/work/test/DIL.csv"
+    wandb.name="ncps_train_${RUN_NAME}" \
+    train.test=true \
+    callbacks.experiment_logger.output_file="/work/test/DIL.csv" \
 
   CHECKPOINT_PATH="${OUTPUT_DIR}/checkpoints/last.ckpt"
   echo "✅ Training for Task ${i} complete. Checkpoint: ${CHECKPOINT_PATH}"
-  python3 train.py \
-    experiment=$BASE_EXPERIMENT \
-    train.pretrained_model_path=${CHECKPOINT_PATH} \
-    train.test_only=true \
-    dataset.permute=false \
-    callbacks.experiment_logger.output_file="/work/test/DIL.csv"
-  # --- 3. テスト ---
-  for j in {1..i}; do
-    python3 train.py \
-        experiment=$BASE_EXPERIMENT \
-        train.pretrained_model_path=${CHECKPOINT_PATH} \
-        train.test_only=true \
-        dataset.permute=true \
-        dataset.seed=$j \
-        callbacks.experiment_logger.output_file="/work/test/DIL.csv"
+
+  # --- 3. Test on all previous tasks ---
+  echo "--- Testing model on ALL previous tasks (0 to ${i}) ---"
+
+  # Use seq to generate the sequence for the inner loop
+  for j in $(seq 0 $i); do
+      echo "---   Testing on Task ${j} ---"
+
+      # Set the permute flag based on the task number (j)
+      PERMUTE_FLAG_TEST=true
+      if [ $j -eq 0 ]; then
+          PERMUTE_FLAG_TEST=false
+      fi
+
+      python3 train.py \
+          experiment=$BASE_EXPERIMENT \
+          train.pretrained_model_path=${CHECKPOINT_PATH} \
+          train.test_only=true \
+          dataset.permute=$PERMUTE_FLAG_TEST \
+          dataset.seed=$j \
+          callbacks.experiment_logger.output_file="/work/test/DIL.csv" \
+
+  done
 done
 
 

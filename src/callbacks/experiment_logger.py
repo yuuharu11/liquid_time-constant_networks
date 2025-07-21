@@ -9,10 +9,10 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from rich import print
 
-# --- 補助的なモニターコールバック ---
+# --- Monitor Callback ---
 
 class TrainingMonitor(Callback):
-    """訓練中のGPUメモリ使用量とエポックごとの学習時間を計測する"""
+    """Measure training epoch duration and peak memory usage."""
     def on_train_epoch_start(self, trainer, pl_module):
         self.epoch_start_time = time.perf_counter()
         self.batch_peak_memory = []
@@ -34,7 +34,7 @@ class TrainingMonitor(Callback):
             print(f"\n[cyan]TrainingMonitor: Avg Peak Memory this Epoch: {avg_peak_memory_mb:.2f} MB, Duration: {epoch_duration:.2f} sec[/cyan]")
 
 class InferenceMonitor(Callback):
-    """テスト（推論）中のレイテンシとGPUメモリ使用量を計測する"""
+    """Measure inference latency and peak memory usage during testing."""
     def on_test_epoch_start(self, trainer, pl_module):
         self.latencies = []
         self.peak_memory = []
@@ -68,17 +68,14 @@ class InferenceMonitor(Callback):
         
         print(f"[green]InferenceMonitor: Avg Latency: {avg_stable_latency_ms:.2f} ms/batch, Avg Memory: {avg_peak_memory_mb:.2f} MB[/green]")
 
-# --- 主役となるCSVロガー ---
-
 class CSVSummaryCallback(Callback):
-    """訓練とテストの結果をまとめてCSVファイルに追記する"""
+    """Append training and testing results to a CSV file."""
     def __init__(self, output_file="results/summary.csv"):
         super().__init__()
         self.output_file = output_file
         self.training_results = {}
-        self.has_written = False
         self.headers = [
-            "ステータス", "モデル", "データセット", "LSTMCell", 
+            "ステータス", "モデル", "データセット", "LSTMCell", "optimizer", "scheduler",
             "batch", "model.n_layers", "model.d_model", "units", "output_units",
             "エポック数", "ode_solver_unfolds", "input_mapping",
             "検証精度 (Val Acc)", "テスト精度 (Test Acc)", "平均レイテンシ (ms/バッチ)",
@@ -87,26 +84,29 @@ class CSVSummaryCallback(Callback):
         ]
 
     def on_train_end(self, trainer: Trainer, pl_module):
-        """全ての学習が完了した時に呼び出される"""
-        self.has_written = False
+        """Call when training ends to capture final results."""
         hparams = pl_module.hparams
-        metrics = trainer.logged_metrics
+        metrics = trainer.callback_metrics
 
-        # ... (他のハイパーパラメータの取得は変更なし) ...
         self.training_results["モデル"] = hparams.model._name_
         self.training_results["データセット"] = hparams.dataset._name_
         self.training_results["LSTMCell"] = hparams.model.layer.get("mixed_memory", "N/A")
+        self.training_results["optimizer"] = "adamw"
+        self.training_results["scheduler"] = "cosine_warmup"
         self.training_results["batch"] = hparams.loader.batch_size
+        self.training_results["model.n_layers"] = hparams.model.get("n_layers", "N/A")
+        self.training_results["model.d_model"] = hparams.model.get("d_model", "N/A")
+        
         units_list = hparams.model.layer.get("units", [])
         self.training_results["units"] = next((item.get("units") for item in units_list if "units" in item), "N/A")
         self.training_results["output_units"] = next((item.get("output_units") for item in units_list if "output_units" in item), "N/A")
+
         self.training_results["エポック数"] = trainer.current_epoch + 1
-        
-        # --- ▼▼▼ ここを修正 ▼▼▼ ---
-        # 最終エポックの値を記録 (* 100 を削除)
-        val_metric_key = f"val/{hparams.task.get('metric', 'accuracy')}"
-        self.training_results["検証精度 (Val Acc)"] = metrics.get(val_metric_key, -1).item()
-        
+        self.training_results["ode_solver_unfolds"] = hparams.model.layer.get("ode_unfolds", "N/A")
+        self.training_results["input_mapping"] = hparams.model.layer.get("input_mapping", "N/A")
+
+        # 最終エポックの値を記録
+        self.training_results["検証精度 (Val Acc)"] = metrics.get(f"val/{hparams.task.get('metric', 'accuracy')}", -1).item() 
         self.training_results["学習時間/epoch"] = metrics.get("training/epoch_duration_sec", -1).item()
         self.training_results["訓練時 Memoey Allocated [MB]"] = metrics.get("training/avg_peak_mb", -1).item()
         
@@ -114,22 +114,16 @@ class CSVSummaryCallback(Callback):
 
     def on_test_end(self, trainer: Trainer, pl_module):
         """全てのテストが完了した時に呼び出される"""
-        if self.has_written:
-            return
-
-        results = self.training_results.copy()
+        results = self.training_results.copy() # 訓練結果をコピー
         metrics = trainer.callback_metrics
 
-        # --- ▼▼▼ ここを修正 ▼▼▼ ---
-        # テスト結果を追加 (* 100 を削除)
-        test_metric_key = f"final/test/{pl_module.hparams.task.get('metric', 'accuracy')}"
-        results["テスト精度 (Test Acc)"] = metrics.get(test_metric_key, -1).item()
-
+        # テスト結果を追加
+        results["テスト精度 (Test Acc)"] = metrics.get(f"final/test/{pl_module.hparams.task.get('metric', 'accuracy')}", -1).item()
         results["平均レイテンシ (ms/バッチ)"] = metrics.get("inference/avg_latency_ms", -1).item()
         results["p95 レイテンシ (ms/バッチ)"] = metrics.get("inference/p95_latency_ms", -1).item()
         results["推論時 Memoey Allocated [MB]"] = metrics.get("inference/avg_peak_mb", -1).item()
 
-        # ... (以降のCSV書き込み処理は変更なし) ...
+        # その他情報を取得
         results["ステータス"] = "完了"
         if isinstance(trainer.logger, WandbLogger):
             results["wandbリンク"] = trainer.logger.experiment.url
@@ -137,6 +131,7 @@ class CSVSummaryCallback(Callback):
             if isinstance(cb, ModelCheckpoint):
                 results["チェックポイントパス"] = cb.best_model_path or "N/A"
         
+        # CSVファイルに書き出す
         os.makedirs(os.path.dirname(self.output_file), exist_ok=True)
         file_exists = os.path.isfile(self.output_file)
         with open(self.output_file, "a", newline="", encoding='utf-8-sig') as f:
@@ -146,6 +141,5 @@ class CSVSummaryCallback(Callback):
             
             row_data = {h: results.get(h, "") for h in self.headers}
             writer.writerow(row_data)
-        
-        self.has_written = True
+            
         print(f"\n[bold magenta]📊 全ての実験結果を {self.output_file} に記録しました。[/bold magenta]")
