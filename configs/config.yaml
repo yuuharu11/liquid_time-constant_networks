@@ -50,6 +50,15 @@ train:
     _name_: null
     decay: 0.7
 
+  ### add function to prevent training from catastrophic forgetting
+  # replay based
+  replay:
+    _name_: null #[none, exact_replay]
+    memory_size: 0 # Size of the memory buffer, 0 means no memory
+    batch_size: 0 # Batch size for the replay function, 0 means no replay
+    n_replay: 1 # Number of times to replay the memory in each epoch
+    buffer_path: null # Path to the memory buffer, if not specified, it will be created in the current directory
+
 tolerance: # fault tolerance for training on preemptible machines
   logdir: ./resume
   id: null # must be set to resume training on preemption
