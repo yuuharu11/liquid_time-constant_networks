@@ -421,7 +421,7 @@ class SequenceLightningModule(pl.LightningModule):
 
     # Add hook when training finished
     def on_train_end(self):
-        if self.replay_mode == "exact_replay" and self.memory_size > 0:
+        if self.replay_mode == "exact_replay" and self.memory_size > 0  and self.hparams.dataset.seed == 0:
             print(f"\n[cyan]Updating Replay Buffer with samples from the current task...[/cyan]")
             
             # add samples from the current task to the replay buffer
@@ -445,8 +445,8 @@ class SequenceLightningModule(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         loss = self._shared_step(batch, batch_idx, prefix="train")
 
-        # Add retraining through replay buffer if specified
-        if self.replay_mode == "exact_replay" and len(self.replay_buffer) >= self.replay_batch_size and self.hparams.dataset.seed == 0:
+        # Add retraining through replay buffer 
+        if self.replay_mode == "exact_replay" and len(self.replay_buffer) >= self.replay_batch_size:
             for _ in range(self.n_replay):
                 # sample a batch from the replay buffer
                 replay_batch = [self.replay_buffer[i] for i in torch.randint(0, len(self.replay_buffer), (self.replay_batch_size,))]
