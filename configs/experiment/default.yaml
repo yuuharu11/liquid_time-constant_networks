@@ -19,4 +19,4 @@ optimizer:
   weight_decay: 0.0
 
 trainer:
-  max_epochs: 50
+  max_epochs: 5

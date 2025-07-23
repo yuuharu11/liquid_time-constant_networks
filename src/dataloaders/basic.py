@@ -4,6 +4,7 @@ import torch
 import torchvision
 from einops.layers.torch import Rearrange
 from src.utils import permutations
+from src.utils import noises
 
 from src.dataloaders.base import default_data_path, ImageResolutionSequenceDataset, ResolutionSequenceDataset, SequenceDataset
 
@@ -20,6 +21,7 @@ class MNIST(SequenceDataset):
     def init_defaults(self):
         return {
             "permute": True,
+            "noise_ratio": 0.0,  # Salt and pepper noise ratio
             "val_split": 0.1,
             "seed": 0,  # For train/val split
         }
@@ -29,7 +31,6 @@ class MNIST(SequenceDataset):
 
         transform_list = [
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Lambda(lambda x: x.view(self.d_input, self.L).t()),
         ]  # (L, d_input)
         if self.permute:
             # below is another permutation that other works have used
@@ -38,10 +39,27 @@ class MNIST(SequenceDataset):
 
             #default
             #permutation = permutations.bitreversal_permutation(self.L)
-            print(f"Using seed = {self.seed} for permutation.")
-            permutation = permutations.random_seed_permutation(self.L, self.seed)
+            print(f"Using seed = {self.seed} for 784-pixel permutation.")
+            permutation = permutations.random_seed_permutation(784, self.seed)
             transform_list.append(
-                torchvision.transforms.Lambda(lambda x: x[permutation])
+                torchvision.transforms.Lambda(
+                    lambda x: x.view(-1)[permutation].reshape(self.L, self.d_input)
+                )
+            )
+        else:
+            # No permutation, just reshape to (L, d_input)
+            transform_list.append(
+                torchvision.transforms.Lambda(lambda x: x.view(self.L, self.d_input))
+            )
+
+        if self.noise_ratio > 0.0:
+            print(f"Adding salt and pepper noise with ratio {self.noise_ratio} and seed {self.seed}.")
+            transform_list.append(
+                torchvision.transforms.Lambda(
+                    lambda x: noises.add_salt_and_pepper_noise(
+                        x, self.noise_ratio, self.seed
+                    )
+                )
             )
         # TODO does MNIST need normalization?
         # torchvision.transforms.Normalize((0.1307,), (0.3081,)) # normalize inputs

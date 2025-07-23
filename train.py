@@ -29,6 +29,7 @@ from src.tasks import decoders, encoders, tasks
 from src.utils import registry
 from src.utils.optim.ema import build_ema_optimizer
 from src.utils.optim_groups import add_optimizer_hooks
+import torch.utils.data as data
 
 log = src.utils.train.get_logger(__name__)
 
@@ -134,6 +135,24 @@ class SequenceLightningModule(pl.LightningModule):
         super().__init__()
         # Passing in config expands it one level, so can access by self.hparams.train instead of self.hparams.config.train
         self.save_hyperparameters(config, logger=False)
+
+        # Add replay-based memory if specified
+        self.replay_buffer = []
+        self.replay_mode = self.hparams.train.replay.get("_name_", "none")
+        self.memory_size = self.hparams.train.replay.get("memory_size", 0)
+        self.replay_batch_size = self.hparams.train.replay.get("batch_size", 0)
+        self.n_replay = self.hparams.train.replay.get("n_replay", 1)
+        self.buffer_path = self.hparams.train.replay.get("buffer_path", None) 
+
+        # --- バッファの読み込み処理を追加 ---
+        if self.replay_mode == "exact_replay" and self.buffer_path and os.path.exists(self.buffer_path):
+            print(f"[cyan]Loading replay buffer from: {self.buffer_path}[/cyan]")
+            self.replay_buffer = torch.load(self.buffer_path)
+            print(f"[green]Replay buffer loaded. Current size: {len(self.replay_buffer)}[/green]")
+        
+        if self.replay_mode == "exact_replay":
+            print(f"[green]Experience Replay enabled with mode '{self.replay_mode}' and memory size: {self.memory_size}[/green]")
+        
 
         # Dataset arguments
         self.dataset = SequenceDataset.registry[self.hparams.dataset._name_](
@@ -400,8 +419,47 @@ class SequenceLightningModule(pl.LightningModule):
                 sync_dist=True,
             )
 
+    # Add hook when training finished
+    def on_train_end(self):
+        if self.replay_mode == "exact_replay" and self.memory_size > 0  and self.hparams.dataset.seed == 0:
+            print(f"\n[cyan]Updating Replay Buffer with samples from the current task...[/cyan]")
+            
+            # add samples from the current task to the replay buffer
+            num_samples_to_add = min(len(self.dataset.dataset_train), self.memory_size)
+            if len(self.replay_buffer) + num_samples_to_add > self.memory_size:
+                num_to_remove = (len(self.replay_buffer) + num_samples_to_add) - self.memory_size
+                del self.replay_buffer[:num_to_remove]
+            indices = list(range(len(self.dataset.dataset_train)))
+            random.shuffle(indices)
+            for i in indices[:num_samples_to_add]:
+                self.replay_buffer.append(self.dataset.dataset_train[i])
+            print(f"[green]Replay Buffer Saved. Current size: {len(self.replay_buffer)}[/green]")
+            
+            if self.buffer_path:
+                print(f"[cyan]Saving replay buffer to: {self.buffer_path}[/cyan]")
+                # Ensure the directory exists
+                os.makedirs(os.path.dirname(self.buffer_path), exist_ok=True)
+                torch.save(self.replay_buffer, self.buffer_path)
+                print(f"[green]Replay Buffer saved. Current size: {len(self.replay_buffer)}[/green]")
+    
     def training_step(self, batch, batch_idx):
         loss = self._shared_step(batch, batch_idx, prefix="train")
+
+        # Add retraining through replay buffer 
+        if self.replay_mode == "exact_replay" and len(self.replay_buffer) >= self.replay_batch_size:
+            for _ in range(self.n_replay):
+                # sample a batch from the replay buffer
+                replay_batch = [self.replay_buffer[i] for i in torch.randint(0, len(self.replay_buffer), (self.replay_batch_size,))]
+                
+                replay_batch = self.train_dataloader().collate_fn(replay_batch)
+                replay_batch = [item.to(self.device) for item in replay_batch]
+
+                # Calculate loss on the replay data
+                # The gradients computed here will be accumulated in the next loss.backward()
+                replay_loss = self._shared_step(replay_batch, batch_idx, prefix="replay")
+
+                # Sum the two losses
+                loss = loss + replay_loss
 
         # Log the loss explicitly so it shows up in WandB
         # Note that this currently runs into a bug in the progress bar with ddp (as of 1.4.6)

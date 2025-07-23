@@ -42,24 +42,18 @@ def hilbert_permutation(n):
     indices = indices[ind_x, ind_y]
     return(indices)
 
+#Edit: Added random seed permutation function
 def random_seed_permutation(n, seed):
   """
-  必須のシード値に基づいて、長さnのランダムな並び替え（permutation）を返します。
-
-  Args:
-    n (int): シーケンスの長さ。
-    seed (int): 並び替えパターンを決定するためのシード値。
-
-  Returns:
-    torch.Tensor: 指定されたシードに基づくランダムな並び替えパターン。
+  make random permutation of n elements with a given seed
   """
-  # 1. PyTorchの乱数ジェネレータを初期化します
+  # 1. generate a random number generator with the specified seed
   generator = torch.Generator()
 
-  # 2. 引数で受け取ったシード値を設定します
+  # 2. set the seed value received as an argument
   generator.manual_seed(seed)
 
-  # 3. シードが設定されたジェネレータを使って、ランダムな順列を生成します
+  # 3. use the seeded generator to generate a random permutation
   return torch.randperm(n, generator=generator)
 
 """ Hilbert curve utilities taken from https://github.com/PrincetonLIPS/numpy-hilbert-curve """
