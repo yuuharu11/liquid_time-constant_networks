@@ -62,6 +62,8 @@ train:
   regularization:
     _name_: null #[none, ewc, si, mas]
     lambda: 0.0 # Regularization strength
+    param_path: null # Path to the parameters for the regularization, if not specified, it will be created in the current directory
+    max_ewc_datasize: 1000 # Maximum number of data points to use
 
 
 tolerance: # fault tolerance for training on preemptible machines

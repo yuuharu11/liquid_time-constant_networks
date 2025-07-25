@@ -30,6 +30,7 @@ from src.utils import registry
 from src.utils.optim.ema import build_ema_optimizer
 from src.utils.optim_groups import add_optimizer_hooks
 import torch.utils.data as data
+import torch.nn.functional as F
 
 log = src.utils.train.get_logger(__name__)
 
@@ -135,7 +136,7 @@ class SequenceLightningModule(pl.LightningModule):
         super().__init__()
         # Passing in config expands it one level, so can access by self.hparams.train instead of self.hparams.config.train
         self.save_hyperparameters(config, logger=False)
-        self._replay_init()
+        self._init_replay()
         self._init_regularization()
 
         # Dataset arguments
@@ -151,7 +152,7 @@ class SequenceLightningModule(pl.LightningModule):
 
         self.setup()  ## Added by KS
 
-    def _replay_init(self):
+    def _init_replay(self):
         # Add replay-based memory if specified
         self.replay_buffer = []
         self.replay_mode = self.hparams.train.replay.get("_name_", "none")
@@ -172,13 +173,19 @@ class SequenceLightningModule(pl.LightningModule):
     def _init_regularization(self):
         self.regularization_mode = self.hparams.train.regularization.get("_name_", "none")
         self.regularization_lambda = self.hparams.train.regularization.get("lambda", 0.0)
+        self.param_path = self.hparams.train.regularization.get("param_path", None)
+        self.max_ewc_datasize = self.hparams.train.regularization.get("max_ewc_datasize", 1000)
         if self.regularization_mode == "none":
             print(f"[green]No regularization enabled.[/green]")
             return
         elif self.regularization_mode == "ewc":
             self.ewc_params = {}
             print(f"[green]EWC regularization enabled with lambda: {self.regularization_lambda}[/green]")
-
+            if self.param_path and os.path.exists(self.param_path):
+                print(f"[cyan]Loading EWC parameters from: {self.param_path}[/cyan]")
+                self.ewc_params = torch.load(self.param_path)
+                print(f"[green]EWC parameters loaded. Current size: {len(self.ewc_params)}[/green]")
+    
     def setup(self, stage=None):
         if not self.hparams.train.disable_dataset:
             self.dataset.setup()
@@ -236,51 +243,46 @@ class SequenceLightningModule(pl.LightningModule):
 
     # Add: function to compute Fisher matrix for ewc
     def _compute_fisher_matrix(self):
-        fisher_matrix = {}
-        for name, param in self.model.named_parameters():
-            if param.requires_grad:
-                fisher_matrix[name] = torch.zeros_like(param)
-
-        self.dataset.setup()
-        loader = self.dataset.train_dataloader(**self.hparams.loader)
+        """Computes the diagonal of the Fisher Information Matrix."""
+        fisher_matrix = {name: torch.zeros_like(param) for name, param in self.model.named_parameters() if param.requires_grad}
         self.model.eval()
+        # Use a fresh instance of the train dataloader for the completed task
+        temp_dataset = SequenceDataset.registry[self.hparams.dataset._name_](**self.hparams.dataset)
+        temp_dataset.setup()
+        loader = temp_dataset.train_dataloader(**self.hparams.loader)
+
         for batch in tqdm(loader, desc="[EWC] Computing Fisher Matrix"):
-            x, y, *z = batch
-            x, y = x.to(self.device), y.to(self.device)
+            self._reset_state(batch, device=self.device)
+            x, y, *z = [item.to(self.device) if hasattr(item, 'to') else item for item in batch]
             
             self.model.zero_grad()
             output, _, _ = self.forward((x, y, *z))
-            
-            # Use log probabilities for stability
             log_probs = F.log_softmax(output, dim=-1)
-            # Sample a label from the output distribution
-            sampled_labels = torch.multinomial(torch.exp(log_probs), 1).squeeze()
-            
+            sampled_labels = torch.multinomial(log_probs.exp(), 1).squeeze(-1)
             loss = F.nll_loss(log_probs, sampled_labels)
             loss.backward()
 
             for name, param in self.model.named_parameters():
-                if param.requires_grad and param.grad is not None:
-                    fisher_matrix[name] += param.grad.data.clone().pow(2)
-
-        # Average the Fisher matrix
+                if param.grad is not None:
+                    fisher_matrix[name] += param.grad.data.pow(2)
+        
+        self.model.train()
         for name in fisher_matrix:
             fisher_matrix[name] /= len(loader)
-        
-        self.model.train() # Return model to training mode
         return fisher_matrix
     
     def _ewc_penalty(self):
-        if not self.ewc_params:
+        """Calculates the EWC penalty."""
+        if not hasattr(self, 'ewc_params') or not self.ewc_params: 
             return 0.0
+        
         penalty = 0.0
         for task_id, params in self.ewc_params.items():
-            fisher_matrix = params["fisher_matrix"]
-            optimal_params = params["optimal_params"]
             for name, param in self.model.named_parameters():
-                if name in fisher_matrix:
-                    penalty += (fisher_matrix[name] * (param - optimal_params[name]) ** 2).sum()
-
+                if name in params['fisher']:
+                    fisher = params['fisher'][name].to(self.device)
+                    opt_param = params['optimal_params'][name].to(self.device)
+                    penalty += (fisher * (param - opt_param).pow(2)).sum()
         return penalty
 
     def load_state_dict(self, state_dict, strict=True):
@@ -509,17 +511,26 @@ class SequenceLightningModule(pl.LightningModule):
                 print(f"[green]Replay Buffer saved. Current size: {len(self.replay_buffer)}[/green]")
 
         # ewc method
-        if self.regularization_mode == "ewc" and self.regularization_lambda >0:
-            current_task_id = self.hparams.dataset.seed
+        if self.regularization_mode == "ewc" and self.regularization_lambda > 0 and self.hparams.dataset.seed == 0:
+            if 0 in self.ewc_params:
+                print(f"[cyan]EWC regularization is enabled. Skipping to Save EWC parameters for Task 0...[/cyan]")
+                return
             print(f"[green]Computing Fisher matrix for EWC regularization...[/green]")
             fisher_matrix = self._compute_fisher_matrix()
             optimal_params = copy.deepcopy(self.model.state_dict())
-            self.ewc_params[current_task_id] = {
-                "fisher_matrix": fisher_matrix,
+            self.ewc_params[0] = {
+                "fisher": fisher_matrix,
                 "optimal_params": optimal_params,
             }
-            print(f"[green]EWC parameters saved for task {current_task_id}.[/green]")
+            print(f"[green]EWC parameters saved for task 0.[/green]")
             
+            if self.param_path:
+                print(f"[cyan]Saving EWC parameters to: {self.param_path}[/cyan]")
+                # Ensure the directory exists
+                os.makedirs(os.path.dirname(self.param_path), exist_ok=True)
+                torch.save(self.ewc_params, self.param_path)
+                print(f"[green]EWC parameters saved to {self.param_path}[/green]")
+
     def training_step(self, batch, batch_idx):
         loss = self._shared_step(batch, batch_idx, prefix="train")
 
@@ -543,6 +554,7 @@ class SequenceLightningModule(pl.LightningModule):
         if self.regularization_lambda > 0:
             ewc_penalty = self._ewc_penalty()
             loss = loss + self.regularization_lambda * ewc_penalty
+            self.log("train/ewc_penalty", ewc_penalty, on_step=True, on_epoch=False, prog_bar=True)
 
         # Log the loss explicitly so it shows up in WandB
         # Note that this currently runs into a bug in the progress bar with ddp (as of 1.4.6)
