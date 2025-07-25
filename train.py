@@ -135,24 +135,8 @@ class SequenceLightningModule(pl.LightningModule):
         super().__init__()
         # Passing in config expands it one level, so can access by self.hparams.train instead of self.hparams.config.train
         self.save_hyperparameters(config, logger=False)
-
-        # Add replay-based memory if specified
-        self.replay_buffer = []
-        self.replay_mode = self.hparams.train.replay.get("_name_", "none")
-        self.memory_size = self.hparams.train.replay.get("memory_size", 0)
-        self.replay_batch_size = self.hparams.train.replay.get("batch_size", 0)
-        self.n_replay = self.hparams.train.replay.get("n_replay", 1)
-        self.buffer_path = self.hparams.train.replay.get("buffer_path", None) 
-
-        # --- バッファの読み込み処理を追加 ---
-        if self.replay_mode == "exact_replay" and self.buffer_path and os.path.exists(self.buffer_path):
-            print(f"[cyan]Loading replay buffer from: {self.buffer_path}[/cyan]")
-            self.replay_buffer = torch.load(self.buffer_path)
-            print(f"[green]Replay buffer loaded. Current size: {len(self.replay_buffer)}[/green]")
-        
-        if self.replay_mode == "exact_replay":
-            print(f"[green]Experience Replay enabled with mode '{self.replay_mode}' and memory size: {self.memory_size}[/green]")
-        
+        self._replay_init()
+        self._init_regularization()
 
         # Dataset arguments
         self.dataset = SequenceDataset.registry[self.hparams.dataset._name_](
@@ -166,6 +150,34 @@ class SequenceLightningModule(pl.LightningModule):
         self._has_setup = False
 
         self.setup()  ## Added by KS
+
+    def _replay_init(self):
+        # Add replay-based memory if specified
+        self.replay_buffer = []
+        self.replay_mode = self.hparams.train.replay.get("_name_", "none")
+        self.memory_size = self.hparams.train.replay.get("memory_size", 0)
+        self.replay_batch_size = self.hparams.train.replay.get("batch_size", 0)
+        self.n_replay = self.hparams.train.replay.get("n_replay", 1)
+        self.buffer_path = self.hparams.train.replay.get("buffer_path", None) 
+
+        # --- to read buffer ---
+        if self.replay_mode == "exact_replay" and self.buffer_path and os.path.exists(self.buffer_path):
+            print(f"[cyan]Loading replay buffer from: {self.buffer_path}[/cyan]")
+            self.replay_buffer = torch.load(self.buffer_path)
+            print(f"[green]Replay buffer loaded. Current size: {len(self.replay_buffer)}[/green]")
+        
+        if self.replay_mode == "exact_replay":
+            print(f"[green]Experience Replay enabled with mode '{self.replay_mode}' and memory size: {self.memory_size}[/green]")
+
+    def _init_regularization(self):
+        self.regularization_mode = self.hparams.train.regularization.get("_name_", "none")
+        self.regularization_lambda = self.hparams.train.regularization.get("lambda", 0.0)
+        if self.regularization_mode == "none":
+            print(f"[green]No regularization enabled.[/green]")
+            return
+        elif self.regularization_mode == "ewc":
+            self.ewc_params = {}
+            print(f"[green]EWC regularization enabled with lambda: {self.regularization_lambda}[/green]")
 
     def setup(self, stage=None):
         if not self.hparams.train.disable_dataset:
@@ -221,6 +233,55 @@ class SequenceLightningModule(pl.LightningModule):
 
         # Handle state logic
         self._initialize_state()
+
+    # Add: function to compute Fisher matrix for ewc
+    def _compute_fisher_matrix(self):
+        fisher_matrix = {}
+        for name, param in self.model.named_parameters():
+            if param.requires_grad:
+                fisher_matrix[name] = torch.zeros_like(param)
+
+        self.dataset.setup()
+        loader = self.dataset.train_dataloader(**self.hparams.loader)
+        self.model.eval()
+        for batch in tqdm(loader, desc="[EWC] Computing Fisher Matrix"):
+            x, y, *z = batch
+            x, y = x.to(self.device), y.to(self.device)
+            
+            self.model.zero_grad()
+            output, _, _ = self.forward((x, y, *z))
+            
+            # Use log probabilities for stability
+            log_probs = F.log_softmax(output, dim=-1)
+            # Sample a label from the output distribution
+            sampled_labels = torch.multinomial(torch.exp(log_probs), 1).squeeze()
+            
+            loss = F.nll_loss(log_probs, sampled_labels)
+            loss.backward()
+
+            for name, param in self.model.named_parameters():
+                if param.requires_grad and param.grad is not None:
+                    fisher_matrix[name] += param.grad.data.clone().pow(2)
+
+        # Average the Fisher matrix
+        for name in fisher_matrix:
+            fisher_matrix[name] /= len(loader)
+        
+        self.model.train() # Return model to training mode
+        return fisher_matrix
+    
+    def _ewc_penalty(self):
+        if not self.ewc_params:
+            return 0.0
+        penalty = 0.0
+        for task_id, params in self.ewc_params.items():
+            fisher_matrix = params["fisher_matrix"]
+            optimal_params = params["optimal_params"]
+            for name, param in self.model.named_parameters():
+                if name in fisher_matrix:
+                    penalty += (fisher_matrix[name] * (param - optimal_params[name]) ** 2).sum()
+
+        return penalty
 
     def load_state_dict(self, state_dict, strict=True):
         if self.hparams.train.pretrained_model_state_hook['_name_'] is not None:
@@ -422,26 +483,43 @@ class SequenceLightningModule(pl.LightningModule):
     # Add hook when training finished
     def on_train_end(self):
         if self.replay_mode == "exact_replay" and self.memory_size > 0  and self.hparams.dataset.seed == 0:
-            print(f"\n[cyan]Updating Replay Buffer with samples from the current task...[/cyan]")
-            
-            # add samples from the current task to the replay buffer
+            # --- Safety check: If buffer is already full, do nothing ---
+            # This prevents re-populating the buffer if you re-run Task 0.
+            if self.replay_buffer:
+                print("[yellow]Replay buffer already contains Task 0 data. Skipping update.[/yellow]")
+                return
+
+            print(f"\n[cyan]Capturing {self.memory_size} samples from Task 0 for the Replay Buffer...[/cyan]")
+
+            # 1. Determine the number of samples to add
             num_samples_to_add = min(len(self.dataset.dataset_train), self.memory_size)
-            if len(self.replay_buffer) + num_samples_to_add > self.memory_size:
-                num_to_remove = (len(self.replay_buffer) + num_samples_to_add) - self.memory_size
-                del self.replay_buffer[:num_to_remove]
+
+            # 2. Randomly select samples from the Task 0 training dataset
             indices = list(range(len(self.dataset.dataset_train)))
             random.shuffle(indices)
             for i in indices[:num_samples_to_add]:
                 self.replay_buffer.append(self.dataset.dataset_train[i])
-            print(f"[green]Replay Buffer Saved. Current size: {len(self.replay_buffer)}[/green]")
-            
+
+            # 3. Save the buffer to a file so it can be reloaded by later tasks
             if self.buffer_path:
                 print(f"[cyan]Saving replay buffer to: {self.buffer_path}[/cyan]")
                 # Ensure the directory exists
                 os.makedirs(os.path.dirname(self.buffer_path), exist_ok=True)
                 torch.save(self.replay_buffer, self.buffer_path)
                 print(f"[green]Replay Buffer saved. Current size: {len(self.replay_buffer)}[/green]")
-    
+
+        # ewc method
+        if self.regularization_mode == "ewc" and self.regularization_lambda >0:
+            current_task_id = self.hparams.dataset.seed
+            print(f"[green]Computing Fisher matrix for EWC regularization...[/green]")
+            fisher_matrix = self._compute_fisher_matrix()
+            optimal_params = copy.deepcopy(self.model.state_dict())
+            self.ewc_params[current_task_id] = {
+                "fisher_matrix": fisher_matrix,
+                "optimal_params": optimal_params,
+            }
+            print(f"[green]EWC parameters saved for task {current_task_id}.[/green]")
+            
     def training_step(self, batch, batch_idx):
         loss = self._shared_step(batch, batch_idx, prefix="train")
 
@@ -450,9 +528,9 @@ class SequenceLightningModule(pl.LightningModule):
             for _ in range(self.n_replay):
                 # sample a batch from the replay buffer
                 replay_batch = [self.replay_buffer[i] for i in torch.randint(0, len(self.replay_buffer), (self.replay_batch_size,))]
-                
+
                 replay_batch = self.train_dataloader().collate_fn(replay_batch)
-                replay_batch = [item.to(self.device) for item in replay_batch]
+                replay_batch = tuple(v.to(self.device) if hasattr(v, "to") else v for v in replay_batch)
 
                 # Calculate loss on the replay data
                 # The gradients computed here will be accumulated in the next loss.backward()
@@ -460,6 +538,11 @@ class SequenceLightningModule(pl.LightningModule):
 
                 # Sum the two losses
                 loss = loss + replay_loss
+
+        # Add ewc penalty if enabled
+        if self.regularization_lambda > 0:
+            ewc_penalty = self._ewc_penalty()
+            loss = loss + self.regularization_lambda * ewc_penalty
 
         # Log the loss explicitly so it shows up in WandB
         # Note that this currently runs into a bug in the progress bar with ddp (as of 1.4.6)
