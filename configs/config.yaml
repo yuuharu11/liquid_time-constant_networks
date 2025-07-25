@@ -53,11 +53,16 @@ train:
   ### add function to prevent training from catastrophic forgetting
   # replay based
   replay:
-    _name_: null #[none, exact_replay]
+    _name_: null #[none, exact_replay, reservoir]
     memory_size: 0 # Size of the memory buffer, 0 means no memory
     batch_size: 0 # Batch size for the replay function, 0 means no replay
     n_replay: 1 # Number of times to replay the memory in each epoch
-    buffer_path: null # Path to the memory buffer, if not specified, it will be created in the current directory
+    buffer_path: /work/buffer/replay_buffer.pt # Path to the memory buffer, if not specified, it will be created in the current directory
+
+  regularization:
+    _name_: null #[none, ewc, si, mas]
+    lambda: 0.0 # Regularization strength
+
 
 tolerance: # fault tolerance for training on preemptible machines
   logdir: ./resume
