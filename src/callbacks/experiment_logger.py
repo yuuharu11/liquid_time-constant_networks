@@ -80,7 +80,7 @@ class CSVSummaryCallback(Callback):
         self.results_cache = {}
         self.has_written_this_run = False
         self.headers = [
-            "ステータス", "モデル", "データセット", "LSTMCell", "optimizer", "scheduler",
+            "ステータス", "モデル", "データセット", "dataset_seed", "LSTMCell", "optimizer", "scheduler",
             "batch", "model.n_layers", "model.d_model", "units", "output_units",
             "エポック数", "ode_solver_unfolds", "input_mapping",
             "検証精度 (Val Acc)", "テスト精度 (Test Acc)", "平均レイテンシ (ms/バッチ)",
@@ -98,6 +98,7 @@ class CSVSummaryCallback(Callback):
         hparams = pl_module.hparams
         self.results_cache["モデル"] = hparams.model._name_
         self.results_cache["データセット"] = hparams.dataset._name_
+        self.results_cache["dataset_seed"] = hparams.dataset.get("seed", "N/A")
         self.results_cache["LSTMCell"] = hparams.model.layer.get("mixed_memory", "N/A")
         self.results_cache["optimizer"] = "adamw"
         self.results_cache["scheduler"] = "cosine_warmup"
