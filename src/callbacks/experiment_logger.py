@@ -8,9 +8,9 @@ from pytorch_lightning import Callback, Trainer
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from rich import print
+import re
 
 # --- Monitor Callbacks (変更の必要なし) ---
-
 class TrainingMonitor(Callback):
     """訓練中のGPUメモリ使用量とエポックごとの学習時間を計測する"""
     def on_train_epoch_start(self, trainer, pl_module):
@@ -79,13 +79,15 @@ class CSVSummaryCallback(Callback):
         self.output_file = output_file
         self.results_cache = {}
         self.has_written_this_run = False
+        # --- ▼▼▼ ヘッダーを修正 ▼▼▼ ---
         self.headers = [
-            "ステータス", "モデル", "データセット", "dataset_seed", "LSTMCell", "optimizer", "scheduler",
+            "phase", "train_seed", "test_seed", "モデル", "データセット", "LSTMCell", 
             "batch", "model.n_layers", "model.d_model", "units", "output_units",
             "エポック数", "ode_solver_unfolds", "input_mapping",
             "検証精度 (Val Acc)", "テスト精度 (Test Acc)", "平均レイテンシ (ms/バッチ)",
             "p95 レイテンシ (ms/バッチ)", "学習時間/epoch", "訓練時 Memoey Allocated [MB]",
-            "推論時 Memoey Allocated [MB]", "チェックポイントパス", "wandbリンク", "備考"
+            "推論時 Memoey Allocated [MB]", "チェックポイントパス", "wandbリンク", 
+            "optimizer", "scheduler", "備考"
         ]
 
     def _get_metric(self, metrics_dict, key, default=-1.0):
@@ -93,37 +95,31 @@ class CSVSummaryCallback(Callback):
         value = metrics_dict.get(key, default)
         return value.item() if isinstance(value, torch.Tensor) else value
 
-    def _capture_hparams(self, pl_module):
-        """ハイパーパラメータをキャッシュに保存する補助関数"""
+    def _capture_hparams(self, trainer: Trainer, pl_module):
         hparams = pl_module.hparams
-        self.results_cache["モデル"] = hparams.model._name_
         self.results_cache["データセット"] = hparams.dataset._name_
-        self.results_cache["dataset_seed"] = hparams.dataset.get("seed", "N/A")
-        self.results_cache["LSTMCell"] = hparams.model.layer.get("mixed_memory", "N/A")
-        self.results_cache["optimizer"] = "adamw"
-        self.results_cache["scheduler"] = "cosine_warmup"
         self.results_cache["batch"] = hparams.loader.batch_size
         self.results_cache["model.n_layers"] = hparams.model.get("n_layers", "N/A")
         self.results_cache["model.d_model"] = hparams.model.get("d_model", "N/A")
-        
         units_list = hparams.model.layer.get("units", [])
         self.results_cache["units"] = next((item.get("units") for item in units_list if "units" in item), "N/A")
         self.results_cache["output_units"] = next((item.get("output_units") for item in units_list if "output_units" in item), "N/A")
         self.results_cache["ode_solver_unfolds"] = hparams.model.layer.get("ode_unfolds", "N/A")
-        self.results_cache["input_mapping"] = hparams.model.layer.get("input_mapping", "N/A")
 
     def on_train_end(self, trainer: Trainer, pl_module):
-        """訓練完了時に呼び出され、訓練結果を一時保存する"""
-        self._capture_hparams(pl_module)
+        self._capture_hparams(trainer, pl_module)
         metrics = trainer.logged_metrics
 
+        self.results_cache["phase"] = "train"
+        self.results_cache["train_seed"] = pl_module.hparams.dataset.get("seed", -1)
         self.results_cache["エポック数"] = trainer.current_epoch + 1
+        
         val_metric_key = f"val/{pl_module.hparams.task.get('metric', 'accuracy')}"
         self.results_cache["検証精度 (Val Acc)"] = self._get_metric(metrics, val_metric_key)
         self.results_cache["学習時間/epoch"] = self._get_metric(metrics, "training/epoch_duration_sec")
         self.results_cache["訓練時 Memoey Allocated [MB]"] = self._get_metric(metrics, "training/avg_peak_mb")
         
-        print("\n[bold cyan]CSVSummaryCallback: 訓練結果をキャプチャしました。テスト完了後に記録します。[/bold cyan]")
+        print("\n[bold cyan]CSVSummaryCallback: 訓練結果をキャプチャしました。[/bold cyan]")
 
     def on_test_start(self, trainer: Trainer, pl_module):
         """テスト開始時に呼び出され、書き込みフラグをリセットする"""
@@ -134,13 +130,23 @@ class CSVSummaryCallback(Callback):
         if self.has_written_this_run:
             return  # 2回目以降の呼び出しは無視 (重複書き込み防止)
 
-        # test_onlyモードの場合、訓練情報がないので、ここでhparamsをキャプチャする
+        # --- ▼▼▼ test_onlyモードのロジックを修正 ▼▼▼ ---
         if not self.results_cache:
-            self._capture_hparams(pl_module)
-            self.results_cache["エポック数"] = trainer.max_epochs # 設定ファイルから取得
-
+            # 訓練情報がないので、hparamsをここで取得
+            self._capture_hparams(trainer, pl_module)
+            self.results_cache["phase"] = "test_only"
+            # チェックポイントパスから訓練時のseedを推測
+            match = re.search(r'train_task_(\d+)', str(trainer.ckpt_path))
+            self.results_cache["train_seed"] = int(match.group(1)) if match else -1
+            self.results_cache["エポック数"] = "N/A" # test_onlyでは不明
+        else:
+            self.results_cache["phase"] = "train_then_test"
+        
+        # 現在のテストのseed値は、常にhparamsから取得
+        self.results_cache["test_seed"] = pl_module.hparams.dataset.get("seed", -1)
+        # --- ▲▲▲ -------------------------------- ▲▲▲ ---
+        
         metrics = trainer.callback_metrics
-
         # テスト結果を追加
         test_metric_key = f"final/test/{pl_module.hparams.task.get('metric', 'accuracy')}"
         self.results_cache["テスト精度 (Test Acc)"] = self._get_metric(metrics, test_metric_key)
@@ -154,7 +160,6 @@ class CSVSummaryCallback(Callback):
             self.results_cache["wandbリンク"] = trainer.logger.experiment.url
         for cb in trainer.callbacks:
             if isinstance(cb, ModelCheckpoint):
-                # test_only時はbest_model_pathがないので、ロードしたckptパスを使う
                 ckpt_path = trainer.ckpt_path or "N/A"
                 self.results_cache["チェックポイントパス"] = cb.best_model_path or ckpt_path
         
@@ -165,10 +170,9 @@ class CSVSummaryCallback(Callback):
             writer = csv.DictWriter(f, fieldnames=self.headers)
             if not file_exists:
                 writer.writeheader()
-            
             row_data = {h: self.results_cache.get(h, "") for h in self.headers}
             writer.writerow(row_data)
         
-        self.has_written_this_run = True # 書き込み完了フラグを立てる
+        self.has_written_this_run = True 
         self.results_cache = {} # 次の実験のためにキャッシュをクリア
         print(f"\n[bold magenta]📊 全ての実験結果を {self.output_file} に記録しました。[/bold magenta]")
