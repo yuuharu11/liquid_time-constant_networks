@@ -13,3 +13,6 @@ wandb/
 # IDE
 .vscode/
 .idea/
+
+csv/
+*.csv
