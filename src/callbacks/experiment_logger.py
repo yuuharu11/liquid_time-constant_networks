@@ -10,34 +10,38 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from rich import print
 import re
 
-# --- Monitor Callbacks (変更の必要なし) ---
 class TrainingMonitor(Callback):
-    """訓練中のGPUメモリ使用量とエポックごとの学習時間を計測する"""
     def on_train_epoch_start(self, trainer, pl_module):
         self.epoch_start_time = time.perf_counter()
-        self.batch_peak_memory = []
+        self.training_peak_memory = []
+        self.training_reserved_mem = []
         if pl_module.device.type == 'cuda':
             torch.cuda.reset_peak_memory_stats(pl_module.device)
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if pl_module.device.type == 'cuda':
-            self.batch_peak_memory.append(torch.cuda.max_memory_allocated(pl_module.device))
-            torch.cuda.reset_peak_memory_stats(pl_module.device)
+            if batch_idx > 0: 
+                self.training_peak_memory.append(torch.cuda.max_memory_allocated(pl_module.device))
+                self.training_reserved_mem.append(torch.cuda.max_memory_reserved(pl_module.device))
+                torch.cuda.reset_peak_memory_stats(pl_module.device)
 
     def on_train_epoch_end(self, trainer, pl_module):
         epoch_duration = time.perf_counter() - self.epoch_start_time
         pl_module.log("training/epoch_duration_sec", epoch_duration, on_step=False, on_epoch=True, logger=True)
         
-        if self.batch_peak_memory and pl_module.device.type == 'cuda':
-            avg_peak_memory_mb = np.mean(self.batch_peak_memory) / (1024**2)
+        if self.training_peak_memory and pl_module.device.type == 'cuda':
+            avg_peak_memory_mb = np.mean(self.training_peak_memory) / (1024**2)
+            avg_reserved_memory_mb = np.mean(self.training_reserved_mem) / (1024**2)
             pl_module.log("training/avg_peak_mb", avg_peak_memory_mb, on_step=False, on_epoch=True, logger=True)
+            pl_module.log("training/avg_reserved_mb", avg_reserved_memory_mb, on_step=False, on_epoch=True, logger=True)
             print(f"\n[cyan]TrainingMonitor: Avg Peak Memory this Epoch: {avg_peak_memory_mb:.2f} MB, Duration: {epoch_duration:.2f} sec[/cyan]")
+            print(f"[cyan]TrainingMonitor: Avg Reserved Memory this Epoch: {avg_reserved_memory_mb:.2f} MB[/cyan]")
 
 class InferenceMonitor(Callback):
-    """テスト（推論）中のレイテンシとGPUメモリ使用量を計測する"""
     def on_test_epoch_start(self, trainer, pl_module):
         self.latencies = []
-        self.peak_memory = []
+        self.inference_peak_memory = []
+        self.inference_reserved_mem = []
         print("\n[yellow]InferenceMonitor: Starting measurement...[/yellow]")
 
     def on_test_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
@@ -48,8 +52,10 @@ class InferenceMonitor(Callback):
 
     def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         if pl_module.device.type == 'cuda':
-            torch.cuda.synchronize()
-            self.peak_memory.append(torch.cuda.max_memory_allocated(pl_module.device))
+            if batch_idx > 0: 
+                torch.cuda.synchronize()
+                self.inference_peak_memory.append(torch.cuda.max_memory_allocated(pl_module.device))
+                self.inference_reserved_mem.append(torch.cuda.max_memory_reserved(pl_module.device))
         
         latency = time.perf_counter() - self.start_time
         self.latencies.append(latency)
@@ -64,34 +70,31 @@ class InferenceMonitor(Callback):
         pl_module.log("inference/p95_latency_ms", p95_latency_ms, logger=True)
 
         avg_peak_memory_mb = 0.0
-        if self.peak_memory and pl_module.device.type == 'cuda':
-            avg_peak_memory_mb = np.mean(self.peak_memory) / (1024**2)
+        if self.inference_peak_memory and pl_module.device.type == 'cuda':
+            avg_peak_memory_mb = np.mean(self.inference_peak_memory) / (1024**2)
             pl_module.log("inference/avg_peak_mb", avg_peak_memory_mb, logger=True)
-        
-        print(f"[green]InferenceMonitor: Avg Latency: {avg_stable_latency_ms:.2f} ms/batch, Avg Memory: {avg_peak_memory_mb:.2f} MB[/green]")
 
-# --- 主役となるCSVロガー (ここを修正) ---
+        avg_reserved_memory_mb = 0.0
+        if self.inference_reserved_mem and pl_module.device.type == 'cuda':
+            avg_reserved_memory_mb = np.mean(self.inference_reserved_mem) / (1024**2)
+            pl_module.log("inference/avg_reserved_mb", avg_reserved_memory_mb, logger=True)
+        print(f"\n[green]InferenceMonitor: Avg Latency: {avg_stable_latency_ms:.2f} ms, P95 Latency: {p95_latency_ms:.2f} ms[/green]")
+        print(f"[green]InferenceMonitor: Avg Peak Memory: {avg_peak_memory_mb:.2f} MB, Avg Reserved Memory: {avg_reserved_memory_mb:.2f} MB[/green]")
 
 class CSVSummaryCallback(Callback):
-    """訓練とテストの結果をまとめてCSVファイルに追記する"""
     def __init__(self, output_file="results/summary.csv"):
         super().__init__()
         self.output_file = output_file
         self.results_cache = {}
         self.has_written_this_run = False
-        # --- ▼▼▼ ヘッダーを修正 ▼▼▼ ---
         self.headers = [
-            "phase", "train_seed", "test_seed", "モデル", "データセット", "LSTMCell", 
-            "batch", "model.n_layers", "model.d_model", "units", "output_units",
-            "エポック数", "ode_solver_unfolds", "input_mapping",
-            "検証精度 (Val Acc)", "テスト精度 (Test Acc)", "平均レイテンシ (ms/バッチ)",
-            "p95 レイテンシ (ms/バッチ)", "学習時間/epoch", "訓練時 Memoey Allocated [MB]",
-            "推論時 Memoey Allocated [MB]", "チェックポイントパス", "wandbリンク", 
-            "optimizer", "scheduler", "備考"
+            "phase", "phase_type", "train_seed", "test_seed", "データセット", "batch", "model.n_layers", "model.d_model", "units", "output_units",
+            "エポック数", "ode_solver_unfolds", "検証精度 (Val Acc)", "テスト精度 (Test Acc)", "平均レイテンシ (ms/バッチ)",
+            "p95 レイテンシ (ms/バッチ)", "学習時間/epoch", "訓練時 Memory Allocated [MB]", "訓練時 Memory Reserved [MB]",
+            "推論時 Memory Allocated [MB]", "推論時 Memory Reserved [MB]", "チェックポイントパス", "wandbリンク"
         ]
 
     def _get_metric(self, metrics_dict, key, default=-1.0):
-        """メトリクスを安全に取得し、テンソルなら.item()を呼ぶ補助関数"""
         value = metrics_dict.get(key, default)
         return value.item() if isinstance(value, torch.Tensor) else value
 
@@ -107,32 +110,30 @@ class CSVSummaryCallback(Callback):
         self.results_cache["ode_solver_unfolds"] = hparams.model.layer.get("ode_unfolds", "N/A")
 
     def on_train_end(self, trainer: Trainer, pl_module):
+        if self.has_written_this_run:
+            return
+        print("[DEBUG] metrics_val.keys():", list(metrics_val.keys()))
         self._capture_hparams(trainer, pl_module)
         metrics = trainer.logged_metrics
-
+        metrics_val = trainer.callback_metrics
         self.results_cache["phase"] = "train"
         self.results_cache["train_seed"] = pl_module.hparams.dataset.get("seed", -1)
         self.results_cache["エポック数"] = trainer.current_epoch + 1
-        
-        val_metric_key = f"val/{pl_module.hparams.task.get('metric', 'accuracy')}"
-        self.results_cache["検証精度 (Val Acc)"] = self._get_metric(metrics, val_metric_key)
+        train_metric_key = f"final/val/{pl_module.hparams.task.get('metric', 'accuracy')}"
+        self.results_cache["検証精度 (Val Acc)"] = self._get_metric(metrics_val, "final/val/accuracy_epoch")
         self.results_cache["学習時間/epoch"] = self._get_metric(metrics, "training/epoch_duration_sec")
-        self.results_cache["訓練時 Memoey Allocated [MB]"] = self._get_metric(metrics, "training/avg_peak_mb")
+        self.results_cache["訓練時 Memory Allocated [MB]"] = self._get_metric(metrics, "training/avg_peak_mb")
+        self.results_cache["訓練時 Memory Reserved [MB]"] = self._get_metric(metrics, "training/avg_reserved_mb")
         
         print("\n[bold cyan]CSVSummaryCallback: 訓練結果をキャプチャしました。[/bold cyan]")
 
     def on_test_start(self, trainer: Trainer, pl_module):
-        """テスト開始時に呼び出され、書き込みフラグをリセットする"""
         self.has_written_this_run = False
 
     def on_test_end(self, trainer: Trainer, pl_module):
-        """テスト完了時に呼び出され、全ての情報をまとめて一度だけ書き込む"""
         if self.has_written_this_run:
-            return  # 2回目以降の呼び出しは無視 (重複書き込み防止)
-
-        # --- ▼▼▼ test_onlyモードのロジックを修正 ▼▼▼ ---
+            return
         if not self.results_cache:
-            # 訓練情報がないので、hparamsをここで取得
             self._capture_hparams(trainer, pl_module)
             self.results_cache["phase"] = "test_only"
             # チェックポイントパスから訓練時のseedを推測
@@ -142,17 +143,17 @@ class CSVSummaryCallback(Callback):
         else:
             self.results_cache["phase"] = "train_then_test"
         
-        # 現在のテストのseed値は、常にhparamsから取得
         self.results_cache["test_seed"] = pl_module.hparams.dataset.get("seed", -1)
-        # --- ▲▲▲ -------------------------------- ▲▲▲ ---
-        
+        test_only_flag = getattr(pl_module.hparams.train, "test_only", False)
+        self.results_cache["phase_type"] = "inference" if test_only_flag else "training"
+
         metrics = trainer.callback_metrics
-        # テスト結果を追加
         test_metric_key = f"final/test/{pl_module.hparams.task.get('metric', 'accuracy')}"
         self.results_cache["テスト精度 (Test Acc)"] = self._get_metric(metrics, test_metric_key)
         self.results_cache["平均レイテンシ (ms/バッチ)"] = self._get_metric(metrics, "inference/avg_latency_ms")
         self.results_cache["p95 レイテンシ (ms/バッチ)"] = self._get_metric(metrics, "inference/p95_latency_ms")
-        self.results_cache["推論時 Memoey Allocated [MB]"] = self._get_metric(metrics, "inference/avg_peak_mb")
+        self.results_cache["推論時 Memory Allocated [MB]"] = self._get_metric(metrics, "inference/avg_peak_mb")
+        self.results_cache["推論時 Memory Reserved [MB]"] = self._get_metric(metrics, "inference/avg_reserved_mb")
 
         # その他情報を取得
         self.results_cache["ステータス"] = "完了"

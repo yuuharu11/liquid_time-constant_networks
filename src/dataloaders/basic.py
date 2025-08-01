@@ -82,9 +82,11 @@ class MNIST(SequenceDataset):
 
 
 class CIFAR10(ImageResolutionSequenceDataset):
-    _name_ = "cifar"
+    _name_ = "cifar10"
     d_output = 10
     l_output = 0
+    d_input = 96
+    L = 32
 
     @property
     def init_defaults(self):
@@ -99,17 +101,6 @@ class CIFAR10(ImageResolutionSequenceDataset):
             "val_split": 0.1,
             "seed": 42,  # For validation split
         }
-
-    @property
-    def d_input(self):
-        if self.grayscale:
-            if self.tokenize:
-                return 256
-            else:
-                return 1
-        else:
-            assert not self.tokenize
-            return 3
 
     def setup(self):
         img_size = 32
@@ -139,6 +130,10 @@ class CIFAR10(ImageResolutionSequenceDataset):
                     )
                 )
         else:
+            # Add function : Rearrange to (L, d_input) where L = 32 * 32, d_input = 3
+            new_L = 32
+            new_d_input = 96
+
             preprocessors = [
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize(
@@ -147,8 +142,8 @@ class CIFAR10(ImageResolutionSequenceDataset):
             ]
             permutations_list = [
                 torchvision.transforms.Lambda(
-                    Rearrange("z h w -> (h w) z", z=3, h=img_size, w=img_size)
-                )  # (L, d_input)
+                    lambda x: x.view(-1).reshape(new_L, new_d_input)
+                )
             ]
 
         # Permutations and reshaping

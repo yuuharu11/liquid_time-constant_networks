@@ -146,7 +146,7 @@ class LTC(SequenceModule):
     def d_output(self):
         return self.output_size
 
-    def forward(self, input, state=None, timespans=None):
+    def forward(self, input, state=None, timespans=None, **kwargs):
         hx=state
         """
 

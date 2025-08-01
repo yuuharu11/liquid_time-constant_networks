@@ -52,7 +52,7 @@ callbacks = {
     "rich_model_summary": "pytorch_lightning.callbacks.RichModelSummary",
     "rich_progress_bar": "pytorch_lightning.callbacks.RichProgressBar",
     "progressive_resizing": "src.callbacks.progressive_resizing.ProgressiveResizing",
-    # 自作コールバック
+    # my callbacks
     "memory_monitor": "src.callbacks.memory_monitor.MemoryMonitor",
     "latency_monitor": "src.callbacks.latency_monitor.LatencyMonitor",
     "experiment_logger": "src.callbacks.experiment_logger.CSVSummaryCallback",

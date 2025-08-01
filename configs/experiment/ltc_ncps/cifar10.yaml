@@ -1,0 +1,31 @@
+# @package _global_
+defaults:
+  - /pipeline: default
+  - /model: ncps_ltc
+
+model:
+  d_model: 96
+  layer:
+    units: 
+    - name: AutoNCP
+    - units: 150
+    - output_units: 10
+    - input_size: 96
+
+
+dataset:
+  _name_: cifar10
+
+loader:
+  batch_size: 128     
+
+optimizer:
+  lr: 3e-4
+  weight_decay: 0.01
+
+scheduler:
+  num_warmup_steps: 500
+  num_training_steps: 21000
+
+trainer:
+  max_epochs: 100      

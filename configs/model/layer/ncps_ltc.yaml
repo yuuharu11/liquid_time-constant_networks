@@ -2,13 +2,13 @@
 #  - cell: ncps_ltc
 
 _name_: ltc_for_ncps
-#input_size: 28
 ode_unfolds: 6
 
 units: 
   - name: AutoNCP
   - units: 64
   - output_units: 10
+  - input_size: 10
 
 return_sequences: True
 batch_first:  True
