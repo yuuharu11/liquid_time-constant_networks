@@ -140,11 +140,7 @@ class CIFAR10(ImageResolutionSequenceDataset):
                     (0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)
                 ),
             ]
-            permutations_list = [
-                torchvision.transforms.Lambda(
-                    lambda x: x.view(-1).reshape(new_L, new_d_input)
-                )
-            ]
+            permutations_list = []
 
         # Permutations and reshaping
         if self.permute == "br":

@@ -11,8 +11,7 @@ train:
   monitor: val/accuracy 
   mode: max
 
-encoder: 
-  _name_: conv2d
+encoder: linear
 
 decoder:
   _name_: sequence

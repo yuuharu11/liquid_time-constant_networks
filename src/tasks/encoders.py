@@ -117,6 +117,31 @@ class Conv1DEncoder(Encoder):
         x = self.conv(x.transpose(1, 2)).transpose(1, 2)
         return x
 
+class Conv2DEncoder(Encoder):
+    def __init__(self, d_input=3, d_model=128, kernel_size=3, stride=1, padding='same'):
+        super().__init__()
+        self.conv = nn.Conv2d(
+            in_channels=d_input,
+            out_channels=d_model,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding
+        )
+    
+    def forward(self, x):
+        print(f"Input shape to encoder: {x.shape}")
+        if x.dim() == 3:
+            x = x.unsqueeze(-1)
+            print(f"Input shape to encoder: {x.shape}")
+        x = x.permute(0, 3, 1, 2)
+        print(f"Input shape to encoder: {x.shape}")
+        x = self.conv(x)  
+        print(f"Input shape to encoder: {x.shape}")
+        x = rearrange(x, 'b c h w -> b (h w) c')  
+        print(f"Input shape to encoder: {x.shape}")
+        
+        return x, {}
+
 class LayerEncoder(Encoder):
     """Use an arbitary SequenceModule layer"""
 
@@ -302,6 +327,7 @@ registry = {
     "time": TimeEncoder,
     "onehot": OneHotEncoder,
     "conv1d": Conv1DEncoder,
+    "conv2d": Conv2DEncoder,
     "patch2d": Conv2DPatchEncoder,
     "timestamp_embedding": TimestampEmbeddingEncoder,
     "layer": LayerEncoder,

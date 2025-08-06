@@ -1,10 +1,10 @@
 # @package _global_
 defaults:
-  - /pipeline: default
+  - /pipeline: detection
   - /model: ncps_ltc
 
 model:
-  d_model: 128
+  d_model: 96
   layer:
     units: 
     - name: AutoNCP
@@ -14,10 +14,6 @@ model:
 
 encoder:
   _name_: conv2d
-  d_input: 32       
-  d_model: 128     
-  kernel_size: 3
-  stride: 1
 
 dataset:
   _name_: cifar10
@@ -26,7 +22,7 @@ loader:
   batch_size: 128     
 
 optimizer:
-  lr: 3e-4
+  lr: 5e-3
   weight_decay: 0.01
 
 scheduler:
