@@ -1,22 +1,21 @@
 # @package _global_
 defaults:
-  - /pipeline: detection
+  - /pipeline: default
   - /model: ncps_ltc
 
 model:
-  d_model: 96
+  d_model: 9
   layer:
     units: 
     - name: AutoNCP
-    - units: 150
-    - output_units: 10
-    - input_size: 96
+    - units: 64
+    - output_units: 6
 
 encoder:
-  _name_: conv2d
+  _name_: linear
 
 dataset:
-  _name_: cifar10
+  _name_: uci_har
 
 loader:
   batch_size: 128     
@@ -28,6 +27,3 @@ optimizer:
 scheduler:
   num_warmup_steps: 500
   num_training_steps: 21000
-
-trainer:
-  max_epochs: 100      

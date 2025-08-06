@@ -16,3 +16,5 @@ wandb/
 
 csv/
 *.csv
+
+data/

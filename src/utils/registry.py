@@ -38,7 +38,6 @@ cell = {
 
 task = {
     "multiclass_classification": "src.tasks.classification.MulticlassClassification",
-    "classification": "src.tasks.classification.MulticlassClassification",
 }
 
 callbacks = {

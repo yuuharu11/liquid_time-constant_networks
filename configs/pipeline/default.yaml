@@ -12,8 +12,7 @@ train:
   mode: max
 
 encoder: 
-  _name_: conv2d
-
+  _name_: linear
 decoder:
   _name_: sequence
   mode: pool
