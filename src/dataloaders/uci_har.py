@@ -4,7 +4,7 @@ import requests
 import numpy as np
 import torch
 from .base import SequenceDataset
-from ..utils.config import default_data_path
+from src.dataloaders.base import default_data_path
 
 class UCIHAR(SequenceDataset):
     _name_ = "uci_har"

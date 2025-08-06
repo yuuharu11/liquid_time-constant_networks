@@ -2,6 +2,7 @@
 defaults:
   - /pipeline: default
   - /model: ncps_ltc
+  - override /dataset: uci_har
 
 model:
   d_model: 9
@@ -13,9 +14,6 @@ model:
 
 encoder:
   _name_: linear
-
-dataset:
-  _name_: uci_har
 
 loader:
   batch_size: 128     

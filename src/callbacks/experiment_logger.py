@@ -112,15 +112,12 @@ class CSVSummaryCallback(Callback):
     def on_train_end(self, trainer: Trainer, pl_module):
         if self.has_written_this_run:
             return
-        print("[DEBUG] metrics_val.keys():", list(metrics_val.keys()))
         self._capture_hparams(trainer, pl_module)
         metrics = trainer.logged_metrics
-        metrics_val = trainer.callback_metrics
         self.results_cache["phase"] = "train"
         self.results_cache["train_seed"] = pl_module.hparams.dataset.get("seed", -1)
         self.results_cache["エポック数"] = trainer.current_epoch + 1
-        train_metric_key = f"final/val/{pl_module.hparams.task.get('metric', 'accuracy')}"
-        self.results_cache["検証精度 (Val Acc)"] = self._get_metric(metrics_val, "final/val/accuracy_epoch")
+        self.results_cache["検証精度 (Val Acc)"] = self._get_metric(metrics, "final/val/accuracy_epoch")
         self.results_cache["学習時間/epoch"] = self._get_metric(metrics, "training/epoch_duration_sec")
         self.results_cache["訓練時 Memory Allocated [MB]"] = self._get_metric(metrics, "training/avg_peak_mb")
         self.results_cache["訓練時 Memory Reserved [MB]"] = self._get_metric(metrics, "training/avg_reserved_mb")
