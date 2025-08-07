@@ -1,0 +1,30 @@
+# @package _global_
+defaults:
+  - /pipeline: default
+  - /model: cnn
+  - override /dataset: uci_har
+
+model:
+  layer:
+    _name_: conv
+    d_model: 64     
+    n_layers: 4     
+    kernel_size: 3   
+    stride: 2
+
+encoder:
+  _name_: id
+loader:
+  batch_size: 128     
+
+optimizer:
+  lr: 5e-3
+  weight_decay: 0.01
+
+scheduler:
+  num_warmup_steps: 500
+  num_training_steps: 5800
+
+decoder:
+  _name_: sequence
+  mode: pool # プーリングで空間情報を集約します

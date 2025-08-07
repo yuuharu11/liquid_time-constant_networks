@@ -26,6 +26,7 @@ layer = {
     "ltc_for_ncps": "src.models.ncps.ltc.LTC",
     "cfc": "src.models.ncps.cfc.CfC",
     "wired_cfc": "src.models.ncps.wired_cfc.WiredCfC",
+    "cnn": "src.models.sequence.cnns.cnn.CNN",
 }
 
 cell = {

@@ -1,0 +1,14 @@
+# @package _global_
+
+_name_: sequence 
+
+layer:
+  _name_: conv 
+  d_model: 64     
+  n_layers: 4     
+  kernel_size: 3   
+  stride: 2        
+
+train:
+  state:
+    mode: null
