@@ -9,6 +9,7 @@ scheduler = {
 
 model = {
     "sequence": "src.models.sequence.SequenceModel",
+    "cnn": "src.models.sequence.cnns.cnn.CNN",
 }
 
 wirings = {
