@@ -5,21 +5,21 @@ class CNN(nn.Module):
     """
     A simple 1D CNN model for time-series classification.
     """
-    def __init__(self, input_size: int, output_size: int):
+    def __init__(self, d_model: int, d_output: int):
         """
         Initializes the CNN model.
 
         Args:
-            input_size (int): The number of input features (channels). 
+            d_model (int): The number of input features (channels). 
                               For UCI-HAR, this is 9.
-            output_size (int): The number of output classes. 
+            d_output (int): The number of output classes. 
                                For UCI-HAR, this is 6.
         """
         super(CNN, self).__init__()
         
         # 畳み込みブロック1
         self.conv1 = nn.Conv1d(
-            in_channels=input_size, 
+            in_channels=d_model, 
             out_channels=64, 
             kernel_size=5, 
             stride=1, 
@@ -45,9 +45,9 @@ class CNN(nn.Module):
         self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(128 * 32, 128) # 128 (out_channels) * 32 (sequence_length)
         self.relu3 = nn.ReLU()
-        self.fc2 = nn.Linear(128, output_size)
+        self.fc2 = nn.Linear(128, d_output)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, **kwargs) -> torch.Tensor:
         """
         Forward pass of the model.
         
@@ -67,4 +67,4 @@ class CNN(nn.Module):
         x = self.relu3(self.fc1(x))
         x = self.fc2(x)
         
-        return x
+        return x, None

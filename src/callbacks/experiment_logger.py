@@ -82,8 +82,9 @@ class InferenceMonitor(Callback):
         print(f"[green]InferenceMonitor: Avg Peak Memory: {avg_peak_memory_mb:.2f} MB, Avg Reserved Memory: {avg_reserved_memory_mb:.2f} MB[/green]")
 
 class CSVSummaryCallback(Callback):
-    def __init__(self, output_file="results/summary.csv"):
+    def __init__(self, enable, output_file="results/summary.csv"):
         super().__init__()
+        self.enable = enable
         self.output_file = output_file
         self.results_cache = {}
         self.has_written_this_run = False
@@ -99,18 +100,20 @@ class CSVSummaryCallback(Callback):
         return value.item() if isinstance(value, torch.Tensor) else value
 
     def _capture_hparams(self, trainer: Trainer, pl_module):
+        if not self.enable:
+            return
         hparams = pl_module.hparams
         self.results_cache["データセット"] = hparams.dataset._name_
         self.results_cache["batch"] = hparams.loader.batch_size
         self.results_cache["model.n_layers"] = hparams.model.get("n_layers", "N/A")
         self.results_cache["model.d_model"] = hparams.model.get("d_model", "N/A")
-        units_list = hparams.model.layer.get("units", [])
-        self.results_cache["units"] = next((item.get("units") for item in units_list if "units" in item), "N/A")
-        self.results_cache["output_units"] = next((item.get("output_units") for item in units_list if "output_units" in item), "N/A")
-        self.results_cache["ode_solver_unfolds"] = hparams.model.layer.get("ode_unfolds", "N/A")
+        #units_list = hparams.model.layer.get("units", [])
+        #self.results_cache["units"] = next((item.get("units") for item in units_list if "units" in item), "N/A")
+        #self.results_cache["output_units"] = next((item.get("output_units") for item in units_list if "output_units" in item), "N/A")
+        #self.results_cache["ode_solver_unfolds"] = hparams.model.layer.get("ode_unfolds", "N/A")
 
     def on_train_end(self, trainer: Trainer, pl_module):
-        if self.has_written_this_run:
+        if self.has_written_this_run or not self.enable:
             return
         self._capture_hparams(trainer, pl_module)
         metrics = trainer.logged_metrics

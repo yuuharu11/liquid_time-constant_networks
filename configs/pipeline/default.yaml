@@ -13,6 +13,7 @@ train:
 
 encoder: 
   _name_: linear
+  
 decoder:
   _name_: sequence
   mode: pool

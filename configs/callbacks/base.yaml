@@ -23,4 +23,5 @@ memory_monitor:
   enable: True
 
 experiment_logger:
+  enable: False
   output_file: /work/temp/logs/experiment.csv

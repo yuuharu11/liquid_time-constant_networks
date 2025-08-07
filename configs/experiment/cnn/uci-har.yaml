@@ -6,11 +6,8 @@ defaults:
 
 model:
   _name_: cnn
-  input_size: 9
-  output_size: 6
-
-encoder:
-  _name_: id
+  d_model: 9
+  d_output: 6
 
 loader:
   batch_size: 128     
@@ -24,5 +21,7 @@ scheduler:
   num_training_steps: 5800
 
 decoder:
-  _name_: sequence
-  mode: pool 
+  _name_: id
+
+encoder: 
+  _name_: id
