@@ -1,13 +1,10 @@
 # @package _global_
 
-_name_: sequence 
+_name_: cnn
+input_size: 16
+output_size: 6
+n_layers: 4
 
-layer:
-  _name_: conv 
-  d_model: 64     
-  n_layers: 4     
-  kernel_size: 3   
-  stride: 2        
 
 train:
   state:

@@ -5,15 +5,13 @@ defaults:
   - override /dataset: uci_har
 
 model:
-  layer:
-    _name_: conv
-    d_model: 64     
-    n_layers: 4     
-    kernel_size: 3   
-    stride: 2
+  _name_: cnn
+  input_size: 9
+  output_size: 6
 
 encoder:
   _name_: id
+
 loader:
   batch_size: 128     
 
@@ -27,4 +25,4 @@ scheduler:
 
 decoder:
   _name_: sequence
-  mode: pool # プーリングで空間情報を集約します
+  mode: pool 
