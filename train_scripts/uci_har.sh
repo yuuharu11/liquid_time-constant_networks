@@ -3,11 +3,11 @@ set -e
 
 # --- 実験の基本設定 ---
 BASE_EXPERIMENT="rnn/uci_har"
-WANDB_PROJECT="rnn-uci_har"
+WANDB_PROJECT="rnn-uci_har_100"
 
 # --- ループさせたいハイパーパラメータのリストを定義 ---
-UNITS_LIST=(8 16 32 64 128)
-N_LAYERS_LIST=(1 2 3 4)
+UNITS_LIST=(64 128)
+N_LAYERS_LIST=(1 2)
 
 echo "Starting hyperparameter sweep for RNN on UCI HAR..."
 
@@ -15,8 +15,8 @@ echo "Starting hyperparameter sweep for RNN on UCI HAR..."
 for units in "${UNITS_LIST[@]}"; do
   for n_layers in "${N_LAYERS_LIST[@]}"; do
     # --- 各実験で、ディレクトリ名とWandBの実行名を動的に生成 ---
-    RUN_NAME="new_units${units}_layers${n_layers}"
-    OUTPUT_DIR="outputs/rnn/uci_har/${RUN_NAME}"
+    RUN_NAME="units${units}_layers${n_layers}"
+    OUTPUT_DIR="outputs/rnn/uci_har_100/${RUN_NAME}"
 
     echo ""
     echo "=================================================================="
@@ -28,7 +28,7 @@ for units in "${UNITS_LIST[@]}"; do
         experiment=$BASE_EXPERIMENT \
         model.n_layers=$n_layers \
         model.d_model=$units \
-        trainer.max_epochs=10 \
+        trainer.max_epochs=100 \
         hydra.run.dir=$OUTPUT_DIR \
         wandb.project=$WANDB_PROJECT \
         wandb.name="rnn_${RUN_NAME}_UCI_HAR"
