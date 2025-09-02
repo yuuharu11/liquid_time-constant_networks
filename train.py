@@ -5,7 +5,7 @@ import sys
 import time
 from functools import partial, wraps
 from typing import Callable, List, Optional
-from src.callbacks.experiment_logger import TrainingMonitor, InferenceMonitor, CSVSummaryCallback # <-- インポートを追加
+from src.callbacks.experiment_logger import TrainingMonitor, InferenceMonitor, CSVSummaryCallback 
 
 
 import hydra
@@ -31,6 +31,7 @@ from src.utils.optim.ema import build_ema_optimizer
 from src.utils.optim_groups import add_optimizer_hooks
 import torch.utils.data as data
 import torch.nn.functional as F
+from pytorch_lightning.profilers import PyTorchProfiler
 
 log = src.utils.train.get_logger(__name__)
 
@@ -754,7 +755,12 @@ class SequenceLightningModule(pl.LightningModule):
 def create_trainer(config, **kwargs):
     callbacks: List[pl.Callback] = []
     logger = None
-
+    # add profiler
+    profiler = PyTorchProfiler(
+        dirpath=".",
+        filename="profile_log",
+        profile_memory=True, 
+    )
     # WandB Logging
     if config.get("wandb") is not None:
         # Pass in wandb.init(config=) argument to get the nice 'x.y.0.z' hparams logged
@@ -804,6 +810,7 @@ def create_trainer(config, **kwargs):
         logger=logger,
         callbacks=callbacks,
         **kwargs,
+        profiler=profiler,
     )
     return trainer
 
@@ -813,7 +820,6 @@ def train(config):
         pl.seed_everything(config.train.seed, workers=True)
     trainer = create_trainer(config)
     model = SequenceLightningModule(config)
-
 
     # Run initial validation epoch (useful for debugging, finetuning)
     if config.train.validate_at_start:
