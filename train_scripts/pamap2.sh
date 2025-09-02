@@ -2,35 +2,33 @@
 set -e
 
 # --- 実験の基本設定 ---
-BASE_EXPERIMENT="rnn/pamap2"
-WANDB_PROJECT="rnn-pamap2"
+BASE_EXPERIMENT="ltc_ncps/pamap2"
+WANDB_PROJECT="ltc_ncps-pamap2"
 
 # --- ループさせたいハイパーパラメータのリストを定義 ---
-UNITS_LIST=(16 32 64 128)
-N_LAYERS_LIST=(1 2 3)
+# d_modelがモデルのサイズを決める唯一のパラメータになる
+D_MODEL_LIST=(32 40 64 128)
 
-echo "Starting hyperparameter sweep for RNN on PAMAP2..."
+echo "Starting hyperparameter sweep for LTC-NCPs on PAMAP2..."
 
-# --- ネストしたforループで、全ての組み合わせを実行 ---
-for units in "${UNITS_LIST[@]}"; do
-  for n_layers in "${N_LAYERS_LIST[@]}"; do
-    # --- 各実験で、ディレクトリ名とWandBの実行名を動的に生成 ---
-    RUN_NAME="units${units}_layers${n_layers}"
-    OUTPUT_DIR="outputs/rnn/pamap2/${RUN_NAME}"
+# --- d_modelのループのみで実行 ---
+for d_model in "${D_MODEL_LIST[@]}"; do
+  # --- 各実験で、ディレクトリ名とWandBの実行名を動的に生成 ---
+  # RUN_NAMEをd_modelのみを反映するように修正
+  RUN_NAME="d_model${d_model}"
+  OUTPUT_DIR="outputs/ltc_ncps/pamap2/${RUN_NAME}"
 
-    echo ""
-    echo "=================================================================="
-    echo "--- Running experiment: ${RUN_NAME} ---"
-    echo "=================================================================="
+  echo ""
+  echo "=================================================================="
+  echo "--- Running experiment: ${RUN_NAME} ---"
+  echo "=================================================================="
 
-    # 実行コマンド
-    python3 train.py \
-        experiment=$BASE_EXPERIMENT \
-        model.n_layers=$n_layers \
-        model.d_model=$units \
-        trainer.max_epochs=50 \
-        hydra.run.dir=$OUTPUT_DIR \
-        wandb.project=$WANDB_PROJECT \
-        wandb.name="rnn_${RUN_NAME}_PAMAP2"
-  done
+  # 実行コマンド
+  python3 train.py \
+      experiment=$BASE_EXPERIMENT \
+      trainer.max_epochs=50 \
+      hydra.run.dir=$OUTPUT_DIR \
+      wandb.project=$WANDB_PROJECT \
+      wandb.name="ltc_ncps_${RUN_NAME}_PAMAP2" \
+      model.d_model=$d_model # model.d_modelを上書きするだけでOK
 done
