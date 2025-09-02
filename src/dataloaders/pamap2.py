@@ -161,6 +161,8 @@ class PAMAP2(SequenceDataset):
     def _create_sequences(self, df, window_len, step):
         """
         DataFrameからスライディングウィンドウを用いてシーケンスデータを作成する。
+        - 各ウィンドウのラベルは「最頻値 (mode)」を代表ラベルとする。
+        - 全一致の制約を外すことで、遷移を含むウィンドウも利用可能にする。
         """
         sequences = []
         labels = []
@@ -169,12 +171,9 @@ class PAMAP2(SequenceDataset):
 
         for i in range(0, len(df) - window_len, step):
             window = df.iloc[i: i + window_len]
-            
-            # ウィンドウ内のラベルが全て同じ場合のみシーケンスとして採用
-            # (活動の変わり目はノイズが多いため)
-            label = window['activity_id'].mode()[0]
-            if (window['activity_id'] == label).all():
-                sequences.append(window[feature_columns].values)
-                labels.append(label)
+            label = window['activity_id'].mode()[0]  # ウィンドウ内の最頻値をラベルにする
+
+            sequences.append(window[feature_columns].values)
+            labels.append(label)
 
         return np.array(sequences), np.array(labels)
