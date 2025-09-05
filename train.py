@@ -818,6 +818,7 @@ def create_trainer(config, **kwargs):
         logger=logger,
         callbacks=callbacks,
         **kwargs,
+        profiler=profiler,
     )
     return trainer
 
