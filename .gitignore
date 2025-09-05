@@ -18,3 +18,7 @@ csv/
 *.csv
 
 data/
+
+*.ipynb
+
+logs/

@@ -2,7 +2,7 @@
 defaults:
   - /pipeline: default
   - /model: default
-  - override /dataset: uci_har
+  - override /dataset: pamap2
 
 # RNN settings for comparison
 model:
@@ -13,7 +13,7 @@ model:
   norm: layer
 
 loader:
-  batch_size: 50
+  batch_size: 200
 
 optimizer:
   lr: 0.001

@@ -25,3 +25,12 @@ memory_monitor:
 experiment_logger:
   enable: False
   output_file: /work/temp/logs/experiment.csv
+
+memory_profiler:
+  enable_callback: false  
+  start_step: 5
+  profile_steps: 20
+  record_shapes: false
+  profile_memory: false
+  with_stack: false
+  output_dir: null

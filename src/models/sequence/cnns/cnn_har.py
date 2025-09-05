@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-class CNN(nn.Module):
+class CNN_UCI(nn.Module):
     """
     A simple 1D CNN model for time-series classification.
     """
@@ -15,7 +15,7 @@ class CNN(nn.Module):
             d_output (int): The number of output classes. 
                                For UCI-HAR, this is 6.
         """
-        super(CNN, self).__init__()
+        super(CNN_UCI, self).__init__()
         
         # 畳み込みブロック1
         self.conv1 = nn.Conv1d(

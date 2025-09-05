@@ -2,7 +2,7 @@
 #  - cell: ncps_ltc
 
 _name_: ltc_for_ncps
-ode_unfolds: 6
+ode_unfolds: 1
 
 units: 
   - name: AutoNCP

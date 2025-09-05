@@ -1,13 +1,19 @@
 # @package _global_
 defaults:
   - /pipeline: default
-  - /model: cnn_har
-  - override /dataset: uci_har
+  - /model: ncps_ltc
+  - override /dataset: pamap2
 
 model:
-  _name_: cnn_har
-  d_model: 9
-  d_output: 6
+  d_model: 10
+  layer:
+    units: 
+    - name: AutoNCP
+    - units: ${model.d_model}
+    - output_units: 12
+
+encoder:
+  _name_: linear
 
 loader:
   batch_size: 128     
@@ -19,9 +25,3 @@ optimizer:
 scheduler:
   num_warmup_steps: 500
   num_training_steps: 5800
-
-decoder:
-  _name_: id
-
-encoder: 
-  _name_: id

@@ -9,7 +9,7 @@ scheduler = {
 
 model = {
     "sequence": "src.models.sequence.SequenceModel",
-    "cnn": "src.models.sequence.cnns.cnn.CNN",
+    "cnn_pamap2": "src.models.sequence.cnns.cnn_pamap2.CNN_PAMAP2",
 }
 
 wirings = {
@@ -57,4 +57,5 @@ callbacks = {
     "memory_monitor": "src.callbacks.memory_monitor.MemoryMonitor",
     "latency_monitor": "src.callbacks.latency_monitor.LatencyMonitor",
     "experiment_logger": "src.callbacks.experiment_logger.CSVSummaryCallback",
+    "memory_profiler": "src.callbacks.memory_profiler.ProfilerCallback",
 }
