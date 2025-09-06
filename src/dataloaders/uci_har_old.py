@@ -6,10 +6,10 @@ import torch
 from .base import SequenceDataset
 from src.dataloaders.base import default_data_path
 
-class UCIHAR(SequenceDataset):
-    _name_ = "uci_har"
-    d_input = 9 
-    d_output = 6   
+class UCIHAR_OLD(SequenceDataset):
+    _name_ = "uci_har_old"
+    d_input = 9
+    d_output = 6
     l_output = 0
     L = 128    
 

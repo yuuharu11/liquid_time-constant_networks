@@ -10,7 +10,7 @@ RESULTS_DIR="outputs/rnn/uci_har_loso"
 NUM_SUBJECTS=30
 
 # --- LOSO ループ ---
-for i in $(seq 1 $NUM_SUBJECTS)
+for i in $(seq 15 $NUM_SUBJECTS)
 do
   echo "====================================================="
   echo "== Running LOSO for Subject ID: $i"

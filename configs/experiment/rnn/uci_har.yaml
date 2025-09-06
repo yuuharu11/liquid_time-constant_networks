@@ -18,8 +18,12 @@ loader:
 optimizer:
   lr: 0.001
 
+scheduler:
+  num_warmup_steps: 100
+  num_training_steps: 4000
+
 trainer:
-  max_epochs: 50
+  max_epochs: 100
 
 train:
   seed: 1112

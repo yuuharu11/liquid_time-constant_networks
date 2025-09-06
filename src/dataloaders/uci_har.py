@@ -1,106 +1,75 @@
-# src/dataloaders/uci_har.py
-
 import os
+import zipfile
+import requests
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
-from src.dataloaders.base import BaseDataModule
-from src.utils.registry import REGISTRY
+from .base import SequenceDataset
+from src.dataloaders.base import default_data_path
 
-# 以前提案した高機能なUCIHARデータセットクラス
-class UCIHAR(Dataset):
-    """
-    UCI-HAR (Human Activity Recognition) データセットのための正確なデータローダー。
-    公式のtrain/test分割と、Leave-One-Subject-Out (LOSO) 交差検証をサポートします。
-    """
-    def __init__(self, data_dir, split="train", loso_subject=None, normalize=True, mean=None, std=None):
-        self.data_dir = data_dir
-        self.split = split
-        self.loso_subject = loso_subject
-        self.normalize = normalize
-        self.signals = [
+class UCIHAR(SequenceDataset):
+    _name_ = "uci_har"
+    d_input = 9
+    d_output = 6
+    l_output = 0
+    L = 128
+
+    @property
+    def init_defaults(self):
+        # normalize: True をデフォルトに追加
+        return {"val_split": 0.2, "seed": 42, "normalize": True}
+
+    def setup(self):
+        self.data_dir = self.data_dir or default_data_path / "uci_har"
+        
+        data_path = self.data_dir / "UCI HAR Dataset"
+        if not os.path.exists(data_path):
+            raise FileNotFoundError(
+                f"UCI HAR Dataset not found in {self.data_dir}. "
+                f"Please run the download commands in the terminal first."
+            )
+
+        X_train_path = data_path / "train/Inertial Signals/"
+        y_train_path = data_path / "train/y_train.txt"
+        X_test_path = data_path / "test/Inertial Signals/"
+        y_test_path = data_path / "test/y_test.txt"
+
+        X_train = self._load_X(X_train_path, "train")
+        y_train = self._load_y(y_train_path)
+        X_test = self._load_X(X_test_path, "test")
+        y_test = self._load_y(y_test_path)
+
+        # === ここから正規化処理を追加 ===
+        if getattr(self, "normalize", True):
+            print("Normalizing data...")
+            # 1. 訓練データのみから平均と標準偏差を計算
+            mean = np.mean(X_train, axis=(0, 1), keepdims=True)
+            std = np.std(X_train, axis=(0, 1), keepdims=True)
+            
+            # 2. 訓練データとテストデータの両方に適用
+            X_train = (X_train - mean) / (std + 1e-8)
+            X_test = (X_test - mean) / (std + 1e-8)
+        # ============================
+
+        # 正規化されたデータを使ってTensorDatasetを作成
+        self.dataset_train = torch.utils.data.TensorDataset(torch.from_numpy(X_train).float(), torch.from_numpy(y_train).long())
+        self.dataset_test = torch.utils.data.TensorDataset(torch.from_numpy(X_test).float(), torch.from_numpy(y_test).long())
+        
+        # 訓練データをさらに学習用と検証用に分割
+        self.split_train_val(self.val_split)
+
+    def _load_X(self, path, split="train"):
+        signals = [
             "body_acc_x", "body_acc_y", "body_acc_z",
             "body_gyro_x", "body_gyro_y", "body_gyro_z",
             "total_acc_x", "total_acc_y", "total_acc_z",
         ]
+        X = []
+        for sig_name in signals:
+            file_name = f"{sig_name}_{split}.txt"
+            file_path = os.path.join(path, file_name)
+            signal = np.loadtxt(file_path, dtype=np.float32)
+            X.append(signal)
+        return np.transpose(np.array(X), (1, 2, 0))
 
-        if self.loso_subject is not None:
-            # --- LOSOモード ---
-            X_all, y_all, subj_all = self._load_all_data()
-            if self.split == "train":
-                mask = (subj_all != self.loso_subject)
-            elif self.split == "test":
-                mask = (subj_all == self.loso_subject)
-            else: # val
-                # 検証データは使わないので空にする
-                self.X, self.y = np.array([]), np.array([])
-                return 
-
-            self.X = X_all[mask]
-            self.y = y_all[mask]
-            self.subjects = subj_all[mask]
-        else:
-            # --- 通常モード (公式のtrain/test分割) ---
-            # このフレームワークではvalセットも必要なので、trainの一部をvalとする
-            if split == 'val':
-                 # trainデータを読み込んで、一部を検証用にする
-                X_train_full, y_train_full, _ = self._load_data_from_split("train")
-                # 簡単のため、最後の10%を検証用とする
-                val_split_idx = int(len(X_train_full) * 0.9)
-                self.X, self.y = X_train_full[val_split_idx:], y_train_full[val_split_idx:]
-            else:
-                 self.X, self.y, self.subjects = self._load_data_from_split(self.split)
-
-
-        if self.normalize:
-            if mean is not None and std is not None:
-                self.mean = mean
-                self.std = std
-            else:
-                if self.split == 'train':
-                    self.mean = np.mean(self.X, axis=(0, 1), keepdims=True)
-                    self.std = np.std(self.X, axis=(0, 1), keepdims=True)
-                else:
-                    raise ValueError("mean and std must be provided for test/val split when normalize=True")
-
-            self.X = (self.X - self.mean) / (self.std + 1e-8)
-
-        self.X = torch.from_numpy(self.X).float().permute(0, 2, 1)
-        self.y = torch.from_numpy(self.y).long()
-
-    def _load_data_from_split(self, split_name):
-        base_dir = os.path.join(self.data_dir, "UCI HAR Dataset")
-        if not os.path.exists(base_dir):
-            raise FileNotFoundError(f"'{base_dir}' not found. Download the dataset first.")
-        X_list = [np.loadtxt(os.path.join(base_dir, split_name, "Inertial Signals", f"{sig}_{split_name}.txt"), dtype=np.float32) for sig in self.signals]
-        X = np.stack(X_list, axis=2)
-        y = np.loadtxt(os.path.join(base_dir, split_name, f"y_{split_name}.txt"), dtype=np.int64) - 1
-        subj = np.loadtxt(os.path.join(base_dir, split_name, f"subject_{split_name}.txt"), dtype=np.int64)
-        return X, y, subj
-
-    def _load_all_data(self):
-        X_train, y_train, subj_train = self._load_data_from_split("train")
-        X_test, y_test, subj_test = self._load_data_from_split("test")
-        return np.concatenate((X_train, X_test)), np.concatenate((y_train, y_test)), np.concatenate((subj_train, subj_test))
-
-    def __len__(self):
-        return len(self.y)
-
-    def __getitem__(self, idx):
-        return self.X[idx], self.y[idx]
-
-
-# フレームワークに統合するためのDataModuleクラス
-@REGISTRY.dataloader("uci_har")
-class UCIHARDataModule(BaseDataModule):
-    def __init__(self, loso_subject=None, **kwargs):
-        super().__init__(**kwargs)
-        self.loso_subject = loso_subject
-
-    def setup(self, stage=None):
-        self.train_dataset = UCIHAR(data_dir=self.data_dir, split="train", loso_subject=self.loso_subject)
-        # LOSOモードでは検証データは使用しない
-        self.val_dataset = UCIHAR(data_dir=self.data_dir, split="val", loso_subject=self.loso_subject,
-                                  mean=self.train_dataset.mean, std=self.train_dataset.std)
-        self.test_dataset = UCIHAR(data_dir=self.data_dir, split="test", loso_subject=self.loso_subject,
-                                   mean=self.train_dataset.mean, std=self.train_dataset.std)
+    def _load_y(self, path):
+        return np.loadtxt(path, dtype=np.int32) - 1
