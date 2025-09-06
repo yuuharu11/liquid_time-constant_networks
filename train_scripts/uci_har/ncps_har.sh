@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # 実験設定: uci_har.yaml を使用
-EXPERIMENT_CONFIG="experiment=cnn/uci-har"
+EXPERIMENT_CONFIG="experiment=ltc_ncps/uci_har"
 
 # 結果を保存するルートディレクトリ
-RESULTS_DIR="outputs/cnn/uci_har_standard"
+RESULTS_DIR="outputs/ltc_ncps/uci_har_standard"
 
 # 試行するシード値のリスト
 SEEDS=(42 123 555 777 1000)
 
 echo "====================================================="
-echo "== Running 5 experiments with different seeds for CNN"
+echo "== Running 5 experiments with different seeds for LTC-NCPS"
 echo "====================================================="
 
 # --- シード値を変更しながらループ ---
@@ -27,10 +27,10 @@ do
     train.seed=$seed \
     dataset.seed=$seed \
     hydra.run.dir="$RESULTS_DIR/seed_$seed" \
-    wandb.project="UCI-HAR-Standard" \
-    wandb.group="CNN" \
-    wandb.name="cnn_seed_$seed" \
     trainer.max_epochs=100 \
+    wandb.project="UCI-HAR-Standard" \
+    wandb.group="LTC-NCPS" \
+    wandb.name="ltc_ncps_seed_$seed"
 
   # エラーが発生したらスクリプトを停止
   if [ $? -ne 0 ]; then

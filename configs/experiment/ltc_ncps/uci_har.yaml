@@ -16,12 +16,12 @@ encoder:
   _name_: linear
 
 loader:
-  batch_size: 128     
+  batch_size: 200     
 
 optimizer:
   lr: 5e-3
   weight_decay: 0.01
 
 scheduler:
-  num_warmup_steps: 500
-  num_training_steps: 5800
+  num_warmup_steps: 100
+  num_training_steps: 4000
