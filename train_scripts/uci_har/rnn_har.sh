@@ -27,6 +27,7 @@ do
     train.seed=$seed \
     dataset.seed=$seed \
     hydra.run.dir="$RESULTS_DIR/seed_$seed" \
+    trainer.max_epochs=100 \
     wandb.project="UCI-HAR-Standard" \
     wandb.group="RNN" \
     wandb.name="rnn_seed_$seed"

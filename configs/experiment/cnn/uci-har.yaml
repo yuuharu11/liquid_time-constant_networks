@@ -1,16 +1,16 @@
 # @package _global_
 defaults:
   - /pipeline: default
-  - /model: cnn_uci_har
+  - /model: cnn_har
   - override /dataset: uci_har
 
 model:
-  _name_: cnn_uci_har
+  _name_: cnn_har
   d_model: 9
   d_output: 6
 
 loader:
-  batch_size: 50     
+  batch_size: 200   
 
 optimizer:
   lr: 1e-4
