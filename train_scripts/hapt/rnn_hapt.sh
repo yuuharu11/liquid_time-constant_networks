@@ -6,7 +6,7 @@ BASE_EXPERIMENT="rnn/hapt"
 WANDB_PROJECT="HAPT" # 全てのHAPT実験をまとめるプロジェクト
 
 # --- ループさせたいハイパーパラメータのリストを定義 ---
-D_MODEL_LIST=(32 64 128 256) # ユニット数
+D_MODEL_LIST=(80 128) # ユニット数
 N_LAYERS_LIST=(1 2 3)      # 層数
 SEED=42                    # 固定seed
 

@@ -12,7 +12,7 @@ wandb:
 model:
   dropout: 0.0
   n_layers: 1
-  d_model: 16  
+  d_model: 128
   prenorm: true
   norm: layer
 

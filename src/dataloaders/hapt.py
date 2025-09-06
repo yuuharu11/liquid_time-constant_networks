@@ -60,10 +60,11 @@ class HAPT(SequenceDataset):
         X_train, y_train = self._create_sequences(train_df, feature_cols, self.window_len, step)
         X_test, y_test   = self._create_sequences(test_df, feature_cols, self.window_len, step)
 
+        """
         # (B, T, C) -> (B, C, T) に変換
         X_train = np.transpose(X_train, (0, 2, 1))
         X_test  = np.transpose(X_test, (0, 2, 1))
-
+        """
         # TensorDataset化
         self.dataset_train = TensorDataset(torch.from_numpy(X_train).float(),
                                            torch.from_numpy(y_train).long())
