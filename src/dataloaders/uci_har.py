@@ -1,25 +1,22 @@
+# src/dataloaders/uci_har.py
+
 import os
 import numpy as np
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
+from src.dataloaders.base import BaseDataModule
+from src.utils.registry import REGISTRY
 
+# 以前提案した高機能なUCIHARデータセットクラス
 class UCIHAR(Dataset):
-    def __init__(self, data_dir, split="train", subjects=None, window_size=128, overlap=0.5, normalize=True):
-        """
-        UCI-HAR Dataset Loader
-
-        Args:
-            data_dir (str or Path): データセットディレクトリ
-            split (str): "train" or "test"
-            subjects (list[int]): 使用する被験者 ID リスト
-            window_size (int): ウィンドウサイズ
-            overlap (float): ウィンドウオーバーラップ率
-            normalize (bool): True の場合チャネルごとに標準化
-        """
+    """
+    UCI-HAR (Human Activity Recognition) データセットのための正確なデータローダー。
+    公式のtrain/test分割と、Leave-One-Subject-Out (LOSO) 交差検証をサポートします。
+    """
+    def __init__(self, data_dir, split="train", loso_subject=None, normalize=True, mean=None, std=None):
         self.data_dir = data_dir
         self.split = split
-        self.window_size = window_size
-        self.overlap = overlap
+        self.loso_subject = loso_subject
         self.normalize = normalize
         self.signals = [
             "body_acc_x", "body_acc_y", "body_acc_z",
@@ -27,69 +24,83 @@ class UCIHAR(Dataset):
             "total_acc_x", "total_acc_y", "total_acc_z",
         ]
 
-        # データ読み込み
-        self.X, self.y, self.subjects = self._load_data(subjects)
+        if self.loso_subject is not None:
+            # --- LOSOモード ---
+            X_all, y_all, subj_all = self._load_all_data()
+            if self.split == "train":
+                mask = (subj_all != self.loso_subject)
+            elif self.split == "test":
+                mask = (subj_all == self.loso_subject)
+            else: # val
+                # 検証データは使わないので空にする
+                self.X, self.y = np.array([]), np.array([])
+                return 
 
-        # 標準化
-        if normalize and split=="train":
-            self.mean = self.X.mean(axis=(0,1), keepdims=True)
-            self.std = self.X.std(axis=(0,1), keepdims=True)
+            self.X = X_all[mask]
+            self.y = y_all[mask]
+            self.subjects = subj_all[mask]
+        else:
+            # --- 通常モード (公式のtrain/test分割) ---
+            # このフレームワークではvalセットも必要なので、trainの一部をvalとする
+            if split == 'val':
+                 # trainデータを読み込んで、一部を検証用にする
+                X_train_full, y_train_full, _ = self._load_data_from_split("train")
+                # 簡単のため、最後の10%を検証用とする
+                val_split_idx = int(len(X_train_full) * 0.9)
+                self.X, self.y = X_train_full[val_split_idx:], y_train_full[val_split_idx:]
+            else:
+                 self.X, self.y, self.subjects = self._load_data_from_split(self.split)
+
+
+        if self.normalize:
+            if mean is not None and std is not None:
+                self.mean = mean
+                self.std = std
+            else:
+                if self.split == 'train':
+                    self.mean = np.mean(self.X, axis=(0, 1), keepdims=True)
+                    self.std = np.std(self.X, axis=(0, 1), keepdims=True)
+                else:
+                    raise ValueError("mean and std must be provided for test/val split when normalize=True")
+
             self.X = (self.X - self.mean) / (self.std + 1e-8)
-        elif normalize and split=="test":
-            self.X = (self.X - self.mean) / (self.std + 1e-8)
 
-        # ウィンドウ切り出し
-        self.X_windows, self.y_windows = self._create_windows()
+        self.X = torch.from_numpy(self.X).float().permute(0, 2, 1)
+        self.y = torch.from_numpy(self.y).long()
 
-    def _load_data(self, subjects):
-        """
-        各信号を読み込み、結合
-        """
+    def _load_data_from_split(self, split_name):
         base_dir = os.path.join(self.data_dir, "UCI HAR Dataset")
         if not os.path.exists(base_dir):
-            raise FileNotFoundError(f"{base_dir} not found. Download the dataset first.")
-
-        # データ読み込み
-        X_list = []
-        for sig in self.signals:
-            path = os.path.join(base_dir, self.split, "Inertial Signals", f"{sig}_{self.split}.txt")
-            X_list.append(np.loadtxt(path, dtype=np.float32))
-        X = np.stack(X_list, axis=2)  # shape: (num_samples, 128, 9)
-
-        # ラベル読み込み
-        y_path = os.path.join(base_dir, self.split, f"y_{self.split}.txt")
-        y = np.loadtxt(y_path, dtype=np.int32) - 1  # 0-indexed
-
-        # 被験者 ID 読み込み
-        subj_path = os.path.join(base_dir, self.split, f"subject_{self.split}.txt")
-        subj = np.loadtxt(subj_path, dtype=np.int32)
-
-        # 被験者選択
-        if subjects is not None:
-            mask = np.isin(subj, subjects)
-            X = X[mask]
-            y = y[mask]
-            subj = subj[mask]
-
+            raise FileNotFoundError(f"'{base_dir}' not found. Download the dataset first.")
+        X_list = [np.loadtxt(os.path.join(base_dir, split_name, "Inertial Signals", f"{sig}_{split_name}.txt"), dtype=np.float32) for sig in self.signals]
+        X = np.stack(X_list, axis=2)
+        y = np.loadtxt(os.path.join(base_dir, split_name, f"y_{split_name}.txt"), dtype=np.int64) - 1
+        subj = np.loadtxt(os.path.join(base_dir, split_name, f"subject_{split_name}.txt"), dtype=np.int64)
         return X, y, subj
 
-    def _create_windows(self):
-        """
-        50%オーバーラップでウィンドウ化
-        """
-        step = int(self.window_size * (1 - self.overlap))
-        X_w, y_w = [], []
-
-        for start in range(0, self.X.shape[1] - self.window_size + 1, step):
-            X_w.append(self.X[:, start:start+self.window_size, :])
-            y_w.append(self.y)  # ウィンドウのラベルは元ラベルそのまま
-
-        X_w = np.concatenate(X_w, axis=0)
-        y_w = np.concatenate(y_w, axis=0)
-        return torch.from_numpy(X_w).float(), torch.from_numpy(y_w).long()
+    def _load_all_data(self):
+        X_train, y_train, subj_train = self._load_data_from_split("train")
+        X_test, y_test, subj_test = self._load_data_from_split("test")
+        return np.concatenate((X_train, X_test)), np.concatenate((y_train, y_test)), np.concatenate((subj_train, subj_test))
 
     def __len__(self):
-        return len(self.y_windows)
+        return len(self.y)
 
     def __getitem__(self, idx):
-        return self.X_windows[idx], self.y_windows[idx]
+        return self.X[idx], self.y[idx]
+
+
+# フレームワークに統合するためのDataModuleクラス
+@REGISTRY.dataloader("uci_har")
+class UCIHARDataModule(BaseDataModule):
+    def __init__(self, loso_subject=None, **kwargs):
+        super().__init__(**kwargs)
+        self.loso_subject = loso_subject
+
+    def setup(self, stage=None):
+        self.train_dataset = UCIHAR(data_dir=self.data_dir, split="train", loso_subject=self.loso_subject)
+        # LOSOモードでは検証データは使用しない
+        self.val_dataset = UCIHAR(data_dir=self.data_dir, split="val", loso_subject=self.loso_subject,
+                                  mean=self.train_dataset.mean, std=self.train_dataset.std)
+        self.test_dataset = UCIHAR(data_dir=self.data_dir, split="test", loso_subject=self.loso_subject,
+                                   mean=self.train_dataset.mean, std=self.train_dataset.std)
