@@ -17,7 +17,7 @@ class UCIHAR_DIL(SequenceDataset):
             "seed": 42, 
             "normalize": True,
             "task_id": 0,          # DILタスクID (0: total_acc, 1: body_acc, 2: body_gyro)
-            "noise_ratio": 0.0     # ノイズの強さ (0.0はノイズなし)
+            "noise_level": 0.0     # ノイズの強さ (0.0はノイズなし)
         }
 
     def setup(self):
@@ -74,13 +74,17 @@ class UCIHAR_DIL(SequenceDataset):
         sensor_channels = {
             0: [6, 7, 8], # total_acc
             1: [0, 1, 2], # body_acc
-            2: [3, 4, 5]  # body_gyro
+            2: [3, 4, 5],  # body_gyro
+            3: [0, 1, 2, 3, 4, 5], # body_acc + body_gyro
+            4: [0, 1, 2, 6, 7, 8], # body_acc + total_acc
+            5: [3, 4, 5, 6, 7, 8], # body_gyro + total_acc
+            6: [0, 1, 2, 3, 4, 5, 6, 7, 8], # all sensors
         }
         
         channels_to_corrupt = sensor_channels.get(task_id)
         if channels_to_corrupt is None:
-            raise ValueError(f"Invalid task_id: {task_id}. Must be 0, 1, or 2.")
-            
+            raise ValueError(f"Invalid task_id: {task_id}. Must be 0, 1, 2, 3, 4, 5, or 6.")
+
         # 指定されたチャネルにのみノイズを印加
         noise = np.random.normal(0, noise_amplitude, noisy_data[:, :, channels_to_corrupt].shape)
         noisy_data[:, :, channels_to_corrupt] += noise

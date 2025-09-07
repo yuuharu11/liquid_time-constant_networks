@@ -1,10 +1,24 @@
 # @package _global_
 defaults:
-  - /pipeline: default
+  - /trainer: default
   - /model: default
-  - override /dataset: uci_har
+  - /loader: default
+  - /dataset: uci_har_dil
+  - /task: multiclass_classification
+  - /optimizer: adamw
+  - /scheduler: cosine_warmup
 
-# RNN settings for comparison
+train:
+  monitor: val/accuracy 
+  mode: max
+
+encoder: 
+  _name_: linear
+  
+decoder:
+  _name_: sequence
+  mode: pool
+  
 model:
   dropout: 0.0
   n_layers: 2
