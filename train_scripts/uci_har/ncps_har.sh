@@ -27,10 +27,10 @@ do
     train.seed=$seed \
     dataset.seed=$seed \
     hydra.run.dir="$RESULTS_DIR/seed_$seed" \
-    trainer.max_epochs=100 \
+    trainer.max_epochs=50 \
     wandb.project="UCI-HAR-Standard" \
-    wandb.group="LTC-NCPS" \
-    wandb.name="ltc_ncps_seed_$seed"
+    wandb.group="LTC-NCPS_100k" \
+    wandb.name="ltc_ncps_100k_seed_$seed"
 
   # エラーが発生したらスクリプトを停止
   if [ $? -ne 0 ]; then

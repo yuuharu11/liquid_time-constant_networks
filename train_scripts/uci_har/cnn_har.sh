@@ -28,9 +28,9 @@ do
     dataset.seed=$seed \
     hydra.run.dir="$RESULTS_DIR/seed_$seed" \
     wandb.project="UCI-HAR-Standard" \
-    wandb.group="CNN" \
-    wandb.name="cnn_seed_$seed" \
-    trainer.max_epochs=100 \
+    wandb.group="CNN_100k" \
+    wandb.name="cnn_100k_seed_$seed" \
+    trainer.max_epochs=50 \
 
   # エラーが発生したらスクリプトを停止
   if [ $? -ne 0 ]; then

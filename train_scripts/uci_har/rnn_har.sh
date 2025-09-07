@@ -7,7 +7,7 @@ EXPERIMENT_CONFIG="experiment=rnn/uci_har"
 RESULTS_DIR="outputs/rnn/uci_har_standard"
 
 # 試行するシード値のリスト
-SEEDS=(555 777 1000)
+SEEDS=(42 123 555 777 1000)
 
 echo "====================================================="
 echo "== Running 5 experiments with different seeds for RNN"
@@ -27,10 +27,10 @@ do
     train.seed=$seed \
     dataset.seed=$seed \
     hydra.run.dir="$RESULTS_DIR/seed_$seed" \
-    trainer.max_epochs=100 \
+    trainer.max_epochs=50 \
     wandb.project="UCI-HAR-Standard" \
-    wandb.group="RNN" \
-    wandb.name="rnn_50k_seed_$seed"
+    wandb.group="RNN_100k" \
+    wandb.name="rnn_100k_seed_$seed"
 
   # エラーが発生したらスクリプトを停止
   if [ $? -ne 0 ]; then

@@ -1,8 +1,16 @@
 # @package _global_
 defaults:
-  - /pipeline: default
+  - /trainer: default
   - /model: cnn_har
-  - override /dataset: uci_har
+  - /loader: default
+  - /dataset: uci_har
+  - /task: multiclass_classification
+  - /optimizer: adamw
+  - /scheduler: cosine_warmup
+
+train:
+  monitor: val/accuracy 
+  mode: max
 
 model:
   _name_: cnn_har
@@ -17,7 +25,7 @@ optimizer:
 
 scheduler:
   num_warmup_steps: 100
-  num_training_steps: 4000
+  num_training_steps: 1500
 
 decoder:
   _name_: id

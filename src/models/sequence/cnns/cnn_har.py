@@ -36,6 +36,19 @@ class CNN_UCI(nn.Module):
         self.block2 = nn.Sequential(
             nn.Conv1d(
                 in_channels=64, 
+                out_channels=96, 
+                kernel_size=5, 
+                stride=1, 
+                padding=2
+            ),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2)
+        )
+
+        # 畳み込みブロック3
+        self.block3 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=96, 
                 out_channels=128, 
                 kernel_size=5, 
                 stride=1, 
@@ -65,6 +78,7 @@ class CNN_UCI(nn.Module):
         
         x = self.block1(x)
         x = self.block2(x)
+        x = self.block3(x)
         
         # Global Average Poolingを適用
         x = self.global_avg_pool(x)

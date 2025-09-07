@@ -25,9 +25,9 @@ do
     dataset.seed=$seed \
     hydra.run.dir="$RESULTS_DIR/seed_$seed" \
     wandb.project="UCI-HAR-Standard" \
-    wandb.group="LSTM" \
-    wandb.name="lstm_run_seed_$seed" \
-    trainer.max_epochs=100
+    wandb.group="LSTM_100k" \
+    wandb.name="lstm_100k_seed_$seed" \
+    trainer.max_epochs=50
 
   if [ $? -ne 0 ]; then
     echo "Error running experiment for seed $seed. Aborting."

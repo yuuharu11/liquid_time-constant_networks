@@ -17,8 +17,8 @@ decoder:
   
 model:
   dropout: 0.0
-  n_layers: 2
-  d_model: 110  
+  n_layers: 1
+  d_model: 224  
   prenorm: true
   norm: layer
 
@@ -30,7 +30,7 @@ optimizer:
 
 scheduler:
   num_warmup_steps: 100
-  num_training_steps: 4000
+  num_training_steps: 1500
 
 trainer:
   max_epochs: 100
