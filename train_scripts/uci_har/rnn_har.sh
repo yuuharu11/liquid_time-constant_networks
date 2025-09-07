@@ -30,7 +30,7 @@ do
     trainer.max_epochs=100 \
     wandb.project="UCI-HAR-Standard" \
     wandb.group="RNN" \
-    wandb.name="rnn_seed_$seed"
+    wandb.name="rnn_50k_seed_$seed"
 
   # エラーが発生したらスクリプトを停止
   if [ $? -ne 0 ]; then

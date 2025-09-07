@@ -8,7 +8,7 @@ defaults:
 model:
   dropout: 0.0
   n_layers: 2
-  d_model: 128  
+  d_model: 110  
   prenorm: true
   norm: layer
 
