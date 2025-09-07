@@ -1,19 +1,31 @@
 # @package _global_
 defaults:
-  - /pipeline: default
+  - /trainer: default
   - /model: ncps_ltc
-  - override /dataset: uci_har
+  - /loader: default
+  - /dataset: uci_har
+  - /task: multiclass_classification
+  - /optimizer: adamw
+  - /scheduler: cosine_warmup
+
+train:
+  monitor: val/accuracy 
+  mode: max
+
+encoder: 
+  _name_: linear
+  
+decoder:
+  _name_: sequence
+  mode: pool
 
 model:
   d_model: 9
   layer:
     units: 
     - name: AutoNCP
-    - units: 64
+    - units: 70
     - output_units: 6
-
-encoder:
-  _name_: linear
 
 loader:
   batch_size: 200     
@@ -24,4 +36,4 @@ optimizer:
 
 scheduler:
   num_warmup_steps: 100
-  num_training_steps: 4000
+  num_training_steps: 3000
