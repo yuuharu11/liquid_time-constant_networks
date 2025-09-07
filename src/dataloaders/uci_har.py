@@ -16,7 +16,10 @@ class UCIHAR(SequenceDataset):
     @property
     def init_defaults(self):
         # normalize: True をデフォルトに追加
-        return {"val_split": 0.2, "seed": 42, "normalize": True}
+        return {"val_split": 0.2, 
+                "seed": 42, 
+                "normalize": True
+            }
 
     def setup(self):
         self.data_dir = self.data_dir or default_data_path / "uci_har"

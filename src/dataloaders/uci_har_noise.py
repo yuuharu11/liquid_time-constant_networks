@@ -8,6 +8,7 @@ class UCIHAR_DIL(SequenceDataset):
     _name_ = "uci_har_dil"
     d_input = 9
     d_output = 6
+    l_output = 0
     L = 128
 
     @property

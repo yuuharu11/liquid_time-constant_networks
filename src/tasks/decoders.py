@@ -103,6 +103,29 @@ class SequenceDecoder(Decoder):
                 )
                 s = s / denom
                 return s
+        elif self.mode == "pool_tmp":
+            restrict = lambda x: (
+                torch.cumsum(x, dim=-2)
+                / torch.arange(
+                    1, 1 + x.size(-2), device=x.device, dtype=x.dtype
+                ).unsqueeze(-1)
+            )[..., -l_output:, :]
+
+            def restrict(x):
+                L = x.size(-2)
+                s = x.sum(dim=-2, keepdim=True)
+                if l_output > 1:
+                    c = torch.cumsum(x[..., -(l_output - 1) :, :].flip(-2), dim=-2)
+                    c = F.pad(c, (0, 0, 1, 0))
+                    s = s - c  # (B, l_output, D)
+                    s = s.flip(-2)
+                # 修正
+                denom = torch.arange(
+                    L - l_output + 1, L + 1, dtype=x.dtype, device=x.device
+                ).unsqueeze(-1)  # (l_output, 1)
+                s = s / denom   
+
+                return s
 
         elif self.mode == "sum":
             restrict = lambda x: torch.cumsum(x, dim=-2)[..., -l_output:, :]
