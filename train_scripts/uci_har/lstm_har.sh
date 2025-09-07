@@ -1,38 +1,34 @@
 #!/bin/bash
 
-# 実験設定: uci_har.yaml を使用
-EXPERIMENT_CONFIG="experiment=rnn/uci_har"
+# 実験設定: LSTM用の設定ファイルを指定
+EXPERIMENT_CONFIG="experiment=lstm/uci_har"
 
 # 結果を保存するルートディレクトリ
-RESULTS_DIR="outputs/rnn/uci_har_standard"
+RESULTS_DIR="outputs/lstm/uci_har_standard"
 
 # 試行するシード値のリスト
-SEEDS=(555 777 1000)
+SEEDS=(42 123 555 777 1000)
 
 echo "====================================================="
-echo "== Running 5 experiments with different seeds for RNN"
+echo "== Running 5 experiments with different seeds for LSTM"
 echo "====================================================="
 
-# --- シード値を変更しながらループ ---
 for seed in "${SEEDS[@]}"
 do
   echo "-----------------------------------------------------"
   echo "== Running Experiment with Seed: $seed"
   echo "-----------------------------------------------------"
 
-  # Hydra のコマンドライン引数で seed を上書き
-  # 出力ディレクトリとWandBの名前もシードごとに変更
   python3 train.py \
     $EXPERIMENT_CONFIG \
     train.seed=$seed \
     dataset.seed=$seed \
     hydra.run.dir="$RESULTS_DIR/seed_$seed" \
-    trainer.max_epochs=100 \
     wandb.project="UCI-HAR-Standard" \
-    wandb.group="RNN" \
-    wandb.name="rnn_50k_seed_$seed"
+    wandb.group="LSTM" \
+    wandb.name="lstm_run_seed_$seed" \
+    trainer.max_epochs=100
 
-  # エラーが発生したらスクリプトを停止
   if [ $? -ne 0 ]; then
     echo "Error running experiment for seed $seed. Aborting."
     exit 1
