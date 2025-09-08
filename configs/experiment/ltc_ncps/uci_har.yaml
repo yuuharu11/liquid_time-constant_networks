@@ -3,7 +3,7 @@ defaults:
   - /trainer: default
   - /model: ncps_ltc
   - /loader: default
-  - /dataset: uci_har
+  - /dataset: uci_har_dil
   - /task: multiclass_classification
   - /optimizer: adamw
   - /scheduler: cosine_warmup

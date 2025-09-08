@@ -2,20 +2,23 @@
 set -e
 
 # --- モデル種別のループ ---
-MODELS=(rnn cnn lstm ncps)
-EXPERIMENT_BASE="uci_har/continual_learning"
-WANDB_PROJECT="UCI-HAR-Continual-Learning"
+MODELS=("RNN" "CNN" "LSTM" "LTC_NCPS")
+EXPERIMENT_BASE="uci_har"
+WANDB_PROJECT="UCI-HAR-DIL"
 SEED=42
 
 # --- DILタスクのシーケンス定義 ---
 TASKS=(
-  "0,0.0"      # Task 0: クリーンなデータ
-  "0,0.3"      # Task 1: total_acc 故障 (軽微)
-  "1,0.3"      # Task 2: body_acc 故障 (軽微)
-  "2,0.3"      # Task 3: body_gyro 故障 (軽微)
-  "3,0.6"      # Task 4: 複合故障 (body_acc + gyro)
-  "4,0.6"      # Task 5: 複合故障 (body_gyro + total_acc)
-  "5,0.6"      # Task 6: 複合故障 (body_acc + total_acc)
+  "6,0.0"      # Task 0: クリーンなデータ
+  "6,0.1"      # Task 1: total_acc 故障 (軽微)
+  "6,0.2"      # Task 2: body_acc 故障 (軽微)
+  "6,0.3"      # Task 3: body_gyro 故障 (軽微)
+  "6,0.4"      # Task 4: 複合故障 (body_acc + gyro)
+  "6,0.5"      # Task 5: 複合故障 (body_gyro + total_acc)
+  "6,0.6"      # Task 6: 複合故障 (body_acc + total_acc)
+  "6,0.7"      # Task 7: 全センサー故障 (深刻)
+  "6,0.8"      # Task 7: 全センサー故障 (深刻)
+  "6,0.9"      # Task 7: 全センサー故障 (深刻)
   "6,1.0"      # Task 7: 全センサー故障 (深刻)
 )
 NUM_TASKS=${#TASKS[@]}
@@ -25,8 +28,9 @@ for MODEL in "${MODELS[@]}"; do
   echo "=== Running CL experiments for model: $MODEL ==="
   echo "=================================================================="
 
-  RESULTS_DIR="/work/outputs/${MODEL}/uci_har/continual_learning"
-  CSV_LOG_PATH="/work/csv/uci-har/${MODEL}.csv"
+  MODEL=${MODEL,,}  # 小文字化
+  RESULTS_DIR="/work/outputs/${MODEL}/uci_har/dil"
+  CSV_LOG_PATH="/work/csv/uci-har/dil/${MODEL}.csv"
   GROUP_NAME="${MODEL^^}"
 
   # -------------------------------
@@ -35,12 +39,12 @@ for MODEL in "${MODELS[@]}"; do
   TASK_0_OUTPUT_DIR="${RESULTS_DIR}/Task_0/train"
   echo "--- Training baseline model on Task 0 ---"
   python3 train.py \
-    experiment=experiment=${MODEL}/${EXPERIMENT_BASE} \
+    experiment=${MODEL}/${EXPERIMENT_BASE} \
     train.seed=$SEED \
     dataset.seed=$SEED \
     dataset.task_id=0 \
     dataset.noise_level=0.0 \
-    train.ckpt_path=null \
+    train.ckpt=null \
     trainer.max_epochs=30 \
     hydra.run.dir=$TASK_0_OUTPUT_DIR \
     wandb.project=$WANDB_PROJECT \
@@ -61,12 +65,12 @@ for MODEL in "${MODELS[@]}"; do
 
     echo "--- Training on ${TASK_NAME} ---"
     python3 train.py \
-      experiment=experiment=${MODEL}/${EXPERIMENT_BASE} \
+      experiment=${MODEL}/${EXPERIMENT_BASE} \
       train.seed=$SEED \
       dataset.seed=$SEED \
       dataset.task_id=$task_id \
       dataset.noise_level=$noise_level \
-      train.ckpt_path=$LAST_CHECKPOINT_PATH \
+      train.ckpt=$LAST_CHECKPOINT_PATH \
       trainer.max_epochs=10 \
       hydra.run.dir=$OUTPUT_DIR \
       wandb.project=$WANDB_PROJECT \
@@ -85,7 +89,7 @@ for MODEL in "${MODELS[@]}"; do
 
       echo "--- Testing on ${PAST_TASK_NAME} ---"
       python3 train.py \
-        experiment=experiment=${MODEL}/${EXPERIMENT_BASE} \
+        experiment=${MODEL}/${EXPERIMENT_BASE} \
         train.seed=$SEED \
         dataset.seed=$SEED \
         train.pretrained_ckpt_path=$LAST_CHECKPOINT_PATH \

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 実験設定: uci_har.yaml を使用
-EXPERIMENT_CONFIG="experiment=cnn/uci-har"
+EXPERIMENT_CONFIG="experiment=cnn/uci_har"
 
 # 結果を保存するルートディレクトリ
 RESULTS_DIR="outputs/cnn/uci_har_standard"
@@ -26,9 +26,11 @@ do
     $EXPERIMENT_CONFIG \
     train.seed=$seed \
     dataset.seed=$seed \
+    dataset.task_id=6 \
+    dataset.noise_level=0.5 \
     hydra.run.dir="$RESULTS_DIR/seed_$seed" \
     wandb.project="UCI-HAR-Standard" \
-    wandb.group="CNN_100k" \
+    wandb.group="CNN_100k_noise" \
     wandb.name="cnn_100k_seed_$seed" \
     trainer.max_epochs=50 \
 

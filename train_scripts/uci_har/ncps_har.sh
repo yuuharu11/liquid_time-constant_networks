@@ -26,10 +26,12 @@ do
     $EXPERIMENT_CONFIG \
     train.seed=$seed \
     dataset.seed=$seed \
+    dataset.task_id=6 \
+    dataset.noise_level=0.0 \
     hydra.run.dir="$RESULTS_DIR/seed_$seed" \
-    trainer.max_epochs=50 \
+    trainer.max_epochs=20 \
     wandb.project="UCI-HAR-Standard" \
-    wandb.group="LTC-NCPS_100k" \
+    wandb.group="LTC-NCPS_100k_noise" \
     wandb.name="ltc_ncps_100k_seed_$seed"
 
   # エラーが発生したらスクリプトを停止

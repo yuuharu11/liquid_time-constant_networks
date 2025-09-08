@@ -87,6 +87,7 @@ class UCIHAR_DIL(SequenceDataset):
             raise ValueError(f"Invalid task_id: {task_id}. Must be 0, 1, 2, 3, 4, 5, or 6.")
 
         # 指定されたチャネルにのみノイズを印加
+        np.random.seed(self.seed)
         noise = np.random.normal(0, noise_amplitude, noisy_data[:, :, channels_to_corrupt].shape)
         noisy_data[:, :, channels_to_corrupt] += noise
         
