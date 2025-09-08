@@ -89,10 +89,9 @@ class CSVSummaryCallback(Callback):
         self.results_cache = {}
         self.has_written_this_run = False
         self.headers = [
-            "phase", "phase_type", "train_seed", "test_seed", "データセット", "batch", "model.n_layers", "model.d_model", "units", "output_units",
-            "エポック数", "ode_solver_unfolds", "検証精度 (Val Acc)", "テスト精度 (Test Acc)", "平均レイテンシ (ms/バッチ)",
-            "p95 レイテンシ (ms/バッチ)", "学習時間/epoch", "訓練時 Memory Allocated [MB]", "訓練時 Memory Reserved [MB]",
-            "推論時 Memory Allocated [MB]", "推論時 Memory Reserved [MB]", "チェックポイントパス", "wandbリンク"
+            "phase", "phase_type", "train_seed", "test_seed", "noise_level", "テスト精度 (Test Acc)", "平均レイテンシ (ms/バッチ)",
+            "p95 レイテンシ (ms/バッチ)", "推論時 Memory Allocated [MB]", "推論時 Memory Reserved [MB]", 
+            "学習時間/epoch", "訓練時 Memory Allocated [MB]", "訓練時 Memory Reserved [MB]", "検証精度 (Val Acc)", "チェックポイントパス", "wandbリンク"
         ]
 
     def _get_metric(self, metrics_dict, key, default=-1.0):
@@ -103,6 +102,7 @@ class CSVSummaryCallback(Callback):
         if not self.enable:
             return
         hparams = pl_module.hparams
+        """
         self.results_cache["データセット"] = hparams.dataset._name_
         self.results_cache["batch"] = hparams.loader.batch_size
         self.results_cache["model.n_layers"] = hparams.model.get("n_layers", "N/A")
@@ -111,15 +111,15 @@ class CSVSummaryCallback(Callback):
         #self.results_cache["units"] = next((item.get("units") for item in units_list if "units" in item), "N/A")
         #self.results_cache["output_units"] = next((item.get("output_units") for item in units_list if "output_units" in item), "N/A")
         #self.results_cache["ode_solver_unfolds"] = hparams.model.layer.get("ode_unfolds", "N/A")
+        """
 
     def on_train_end(self, trainer: Trainer, pl_module):
         if self.has_written_this_run or not self.enable:
             return
-        self._capture_hparams(trainer, pl_module)
+        #self._capture_hparams(trainer, pl_module)
         metrics = trainer.logged_metrics
         self.results_cache["phase"] = "train"
         self.results_cache["train_seed"] = pl_module.hparams.dataset.get("seed", -1)
-        self.results_cache["エポック数"] = trainer.current_epoch + 1
         self.results_cache["検証精度 (Val Acc)"] = self._get_metric(metrics, "final/val/accuracy_epoch")
         self.results_cache["学習時間/epoch"] = self._get_metric(metrics, "training/epoch_duration_sec")
         self.results_cache["訓練時 Memory Allocated [MB]"] = self._get_metric(metrics, "training/avg_peak_mb")
@@ -139,7 +139,6 @@ class CSVSummaryCallback(Callback):
             # チェックポイントパスから訓練時のseedを推測
             match = re.search(r'train_task_(\d+)', str(trainer.ckpt_path))
             self.results_cache["train_seed"] = int(match.group(1)) if match else -1
-            self.results_cache["エポック数"] = "N/A" # test_onlyでは不明
         else:
             self.results_cache["phase"] = "train_then_test"
         
@@ -149,6 +148,7 @@ class CSVSummaryCallback(Callback):
 
         metrics = trainer.callback_metrics
         test_metric_key = f"final/test/{pl_module.hparams.task.get('metric', 'accuracy')}"
+        self.results_cache["noise_level"] = pl_module.hparams.dataset.get("noise_level", -1)
         self.results_cache["テスト精度 (Test Acc)"] = self._get_metric(metrics, test_metric_key)
         self.results_cache["平均レイテンシ (ms/バッチ)"] = self._get_metric(metrics, "inference/avg_latency_ms")
         self.results_cache["p95 レイテンシ (ms/バッチ)"] = self._get_metric(metrics, "inference/p95_latency_ms")

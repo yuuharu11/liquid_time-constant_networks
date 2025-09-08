@@ -29,7 +29,7 @@ for MODEL in "${MODELS[@]}"; do
   echo "=================================================================="
 
   MODEL=${MODEL,,}  # 小文字化
-  RESULTS_DIR="/work/outputs/${MODEL}/uci_har/dil"
+  RESULTS_DIR="/work/outputs/${MODEL}/uci_har_standard/dil"
   CSV_LOG_PATH="/work/csv/uci-har/dil/${MODEL}.csv"
   GROUP_NAME="${MODEL^^}"
 
@@ -50,7 +50,6 @@ for MODEL in "${MODELS[@]}"; do
     wandb.project=$WANDB_PROJECT \
     wandb.group=$GROUP_NAME \
     wandb.name="Task_0_Train" \
-    callbacks.experiment_logger.output_file=$CSV_LOG_PATH
 
   LAST_CHECKPOINT_PATH="${TASK_0_OUTPUT_DIR}/checkpoints/last.ckpt"
   echo "✅ Task 0 training complete. Checkpoint: $LAST_CHECKPOINT_PATH"
@@ -70,13 +69,12 @@ for MODEL in "${MODELS[@]}"; do
       dataset.seed=$SEED \
       dataset.task_id=$task_id \
       dataset.noise_level=$noise_level \
-      train.ckpt=$LAST_CHECKPOINT_PATH \
+      train.pretrained_model_path=$LAST_CHECKPOINT_PATH \
       trainer.max_epochs=10 \
       hydra.run.dir=$OUTPUT_DIR \
       wandb.project=$WANDB_PROJECT \
       wandb.group=$GROUP_NAME \
       wandb.name="${TASK_NAME}_Train" \
-      callbacks.experiment_logger.output_file=$CSV_LOG_PATH
 
     LAST_CHECKPOINT_PATH="${OUTPUT_DIR}/checkpoints/last.ckpt"
 
@@ -92,7 +90,9 @@ for MODEL in "${MODELS[@]}"; do
         experiment=${MODEL}/${EXPERIMENT_BASE} \
         train.seed=$SEED \
         dataset.seed=$SEED \
-        train.pretrained_ckpt_path=$LAST_CHECKPOINT_PATH \
+        dataset.task_id=$past_task_id \
+        dataset.noise_level=$past_noise_level \
+        train.pretrained_model_path=$LAST_CHECKPOINT_PATH \
         train.test_only=true \
         hydra.run.dir=$EVAL_DIR \
         callbacks.experiment_logger.output_file=$CSV_LOG_PATH
