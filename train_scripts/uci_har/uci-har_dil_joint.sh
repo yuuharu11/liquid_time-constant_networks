@@ -3,7 +3,7 @@ set -e
 
 # --- 実験設定 ---
 # ループで実行したいモデルのリスト
-MODELS=("rnn" "cnn" "lstm" "ncps") 
+MODELS=("ltc_ncps") 
 EXPERIMENT_BASE="uci_har"
 RESULTS_BASE="/work/outputs"
 CSV_BASE="/work/csv/uci-har/dil/im" # 結果を保存するCSVのパス

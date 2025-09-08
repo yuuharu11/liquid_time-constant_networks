@@ -1,0 +1,5 @@
+_name_: uci_har_cil
+val_split: 0.2
+seed: 42
+normalize: True
+task_id: 0
