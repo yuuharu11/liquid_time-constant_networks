@@ -11,14 +11,28 @@ class UCIHAR_DIL(SequenceDataset):
     l_output = 0
     L = 128
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # センサーグループの定義を一度だけ行う
+        self.sensor_channels = {
+            0: [6, 7, 8], # total_acc
+            1: [0, 1, 2], # body_acc
+            2: [3, 4, 5],  # body_gyro
+            3: [0, 1, 2, 3, 4, 5], # body_acc + body_gyro
+            4: [0, 1, 2, 6, 7, 8], # body_acc + total_acc
+            5: [3, 4, 5, 6, 7, 8], # body_gyro + total_acc
+            6: list(range(9)),      # all sensors
+        }
+
     @property
     def init_defaults(self):
         return {
             "val_split": 0.2, 
             "seed": 42, 
             "normalize": True,
-            "task_id": 0,          # DILタスクID (0: total_acc, 1: body_acc, 2: body_gyro)
-            "noise_level": 0.0     # ノイズの強さ (0.0はノイズなし)
+            "task_id": 0,
+            "noise_level": 0.0,
+            "joint_training": False # 合同学習
         }
 
     def setup(self):
@@ -31,73 +45,83 @@ class UCIHAR_DIL(SequenceDataset):
                 f"Please download the dataset first."
             )
 
-        # 常にクリーンなデータをロード
         X_train_clean = self._load_X(data_path / "train/Inertial Signals/", "train")
         y_train = self._load_y(data_path / "train/y_train.txt")
         X_test_clean = self._load_X(data_path / "test/Inertial Signals/", "test")
         y_test = self._load_y(data_path / "test/y_test.txt")
 
-        # 正規化
         if getattr(self, "normalize", True):
             mean = np.mean(X_train_clean, axis=(0, 1), keepdims=True)
             std = np.std(X_train_clean, axis=(0, 1), keepdims=True)
             X_train_clean = (X_train_clean - mean) / (std + 1e-8)
             X_test_clean = (X_test_clean - mean) / (std + 1e-8)
-        
-        # --- DILタスク：指定されたセンサーグループにノイズを追加 ---
-        if self.noise_level > 0:
-            print(f"Applying Gaussian noise (level: {self.noise_level}) to sensor group {self.task_id}...")
-            # データの標準偏差を基準にノイズの大きさを決める
-            data_std = np.std(X_train_clean)
-            noise_amplitude = data_std * self.noise_level
+            
+        if self.joint_training:
+            t = self.task_id
+            current_nl = self.noise_level
 
-            # train と test の両方に同じノイズを追加
-            X_train = self._apply_noise(X_train_clean, self.task_id, noise_amplitude)
-            X_test = self._apply_noise(X_test_clean, self.task_id, noise_amplitude)
+            X_train_list, X_test_list, y_train_list, y_test_list = [], [], [], []
+            
+            # ノイズを0まで0.1刻みで減らしながら複製
+            while current_nl >= 0:
+                x_train_tmp = self._apply_noise(X_train_clean, t, current_nl) if current_nl > 0 else X_train_clean
+                x_test_tmp = self._apply_noise(X_test_clean, t, current_nl) if current_nl > 0 else X_test_clean
+                X_train_list.append(x_train_tmp)
+                X_test_list.append(x_test_tmp)
+                y_train_list.append(y_train)
+                y_test_list.append(y_test)
+                current_nl = round(current_nl - 0.1, 1)  
+
+            # まとめて連結
+            X_train = np.concatenate(X_train_list, axis=0)
+            X_test = np.concatenate(X_test_list, axis=0)
+            y_train = np.concatenate(y_train_list, axis=0)
+            y_test = np.concatenate(y_test_list, axis=0)
         else:
-            # ノイズレベルが0なら、そのままクリーンなデータを使用
-            X_train = X_train_clean
-            X_test = X_test_clean
+            if self.noise_level > 0:
+                print(f"Applying Gaussian noise (level: {self.noise_level}) to sensor group {self.task_id}...")
+                np.random.seed(self.seed) # 再現性のためにseedを設定
+                data_std = np.std(X_train_clean)
+                noise_amplitude = data_std * self.noise_level
+                X_train = self._apply_noise(X_train_clean, self.task_id, noise_amplitude)
+                X_test = self._apply_noise(X_test_clean, self.task_id, noise_amplitude)
+            elif self.noise_level < 0:
+                print(f"Invalidating sensor group {self.task_id}...")
+                X_train = self._invalid_input(X_train_clean, self.task_id)
+                X_test = self._invalid_input(X_test_clean, self.task_id)
+            else:
+                X_train = X_train_clean
+                X_test = X_test_clean
 
-        # TensorDatasetに変換
         self.dataset_train = torch.utils.data.TensorDataset(torch.from_numpy(X_train).float(), torch.from_numpy(y_train).long())
         self.dataset_test = torch.utils.data.TensorDataset(torch.from_numpy(X_test).float(), torch.from_numpy(y_test).long())
         
-        # 訓練データを学習用と検証用に分割
         self.split_train_val(self.val_split)
 
     def _apply_noise(self, data, task_id, noise_amplitude):
-        """特定のセンサーグループのチャネルにガウシアンノイズを追加する"""
         noisy_data = np.copy(data)
-        
-        # センサーグループとチャネルのインデックスを対応付ける
-        # total_acc: [6, 7, 8], body_acc: [0, 1, 2], body_gyro: [3, 4, 5]
-        sensor_channels = {
-            0: [6, 7, 8], # total_acc
-            1: [0, 1, 2], # body_acc
-            2: [3, 4, 5],  # body_gyro
-            3: [0, 1, 2, 3, 4, 5], # body_acc + body_gyro
-            4: [0, 1, 2, 6, 7, 8], # body_acc + total_acc
-            5: [3, 4, 5, 6, 7, 8], # body_gyro + total_acc
-            6: [0, 1, 2, 3, 4, 5, 6, 7, 8], # all sensors
-        }
-        
-        channels_to_corrupt = sensor_channels.get(task_id)
+        channels_to_corrupt = self.sensor_channels.get(task_id)
         if channels_to_corrupt is None:
-            raise ValueError(f"Invalid task_id: {task_id}. Must be 0, 1, 2, 3, 4, 5, or 6.")
-
-        # 指定されたチャネルにのみノイズを印加
-        np.random.seed(self.seed)
+            raise ValueError(f"Invalid task_id: {task_id}.")
+        
         noise = np.random.normal(0, noise_amplitude, noisy_data[:, :, channels_to_corrupt].shape)
         noisy_data[:, :, channels_to_corrupt] += noise
-        
         return noisy_data
+
+    def _invalid_input(self, data, task_id):
+        invalid_data = np.copy(data)
+        channels_to_invalidate = self.sensor_channels.get(task_id)
+        if channels_to_invalidate is None:
+            raise ValueError(f"Invalid task_id: {task_id}.")
+        
+        invalid_data[:, :, channels_to_invalidate] = 0.0
+        return invalid_data
 
     def _load_X(self, path, split="train"):
         signals = [
-            "body_acc_x", "body_acc_y", "body_acc_z",      # Channels 0, 1, 2
-            "body_gyro_x", "body_gyro_y", "body_gyro_z",   # Channels 3, 4, 5
-            "total_acc_x", "total_acc_y", "total_acc_z",   # Channels 6, 7, 8
+            "body_acc_x", "body_acc_y", "body_acc_z",
+            "body_gyro_x", "body_gyro_y", "body_gyro_z",
+            "total_acc_x", "total_acc_y", "total_acc_z",
         ]
         X = [np.loadtxt(path / f"{sig}_{split}.txt", dtype=np.float32) for sig in signals]
         return np.transpose(np.array(X), (1, 2, 0))
