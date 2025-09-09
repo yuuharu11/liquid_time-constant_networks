@@ -1,67 +1,116 @@
 #!/bin/bash
 set -e
 
-# --- 共通の実験設定 ---
-EXPERIMENT_CONFIG="ltc_ncps/uci_har_cil" # CIL用の実験設定ファイル
-LOADER_BATCH_SIZE=200
+# --- 実験設定 (編集箇所) ---
+EXPERIMENT_CONFIG="ltc_ncps/uci_har_cil" # Hydraの実験設定ファイル
+RESULTS_DIR="/work/outputs/ltc-ncps/cil/er_sweep" # 結果を保存するベースディレクトリ
+WANDB_PROJECT="UCI-HAR-CIL-ER-Sweep" # Weights & Biases のプロジェクト名
 SEED=42
+NUM_TASKS=5 # CILタスクの総数
+EPOCHS=30
 
-# --- CILのシナリオ設定 (2クラスずつ増加) ---
-# Task 0: クラス 0, 1
-# Task 1: クラス 0, 1, 2, 3
-# Task 2: クラス 0, 1, 2, 3, 4, 5
-TASK_CLASSES=(
-    "[3,4]"
-    "[3,4,5]"
-    "[0,3,4,5]"
-    "[0,1,3,4,5]"
-    "[0,1,2,3,4,5]"
-)
-
-# --- ERのハイパーパラメータースイープ設定 ---
+# --- ハイパーパラメータースイープ設定 ---
 MEMORY_SIZES=(500 1500 3000)
 REPLAY_BATCH_SIZES=(32 64 96)
 
-echo "Starting CIL with Experience Replay sweep for UCI-HAR..."
+echo "🚀 Starting CIL with Experience Replay sweep for UCI-HAR..."
+echo "=================================================================="
 
 # --- ハイパーパラメータのループ ---
 for mem_size in "${MEMORY_SIZES[@]}"; do
   for replay_bs in "${REPLAY_BATCH_SIZES[@]}"; do
 
+    SWEEP_NAME="mem${mem_size}_bs${replay_bs}"
     echo ""
-    echo "=================================================================="
-    echo "--- Running Sweep: memory_size=${mem_size}, replay_batch_size=${replay_bs} ---"
-    echo "=================================================================="
+    echo "--- Running Sweep: ${SWEEP_NAME} ---"
 
-    # リプレイバッファのパスをスイープごとに一意に設定
-    BUFFER_PATH="/work/buffer/er_buffer_mem${mem_size}_bs${replay_bs}.pt"
-    # 以前のバッファが残っていれば、新しいスイープの開始時に削除
+    # --- スイープごとの初期化 ---
+    LAST_CHECKPOINT_PATH="" # 最初のタスクでは pretrained_model_path を使わない
+    BUFFER_PATH="/work/buffer/er_buffer_${SWEEP_NAME}.pt"
+    CSV_LOG_PATH="${RESULTS_DIR}/${SWEEP_NAME}/log.csv"
+
+    # 以前のバッファが残っていれば削除
     rm -f $BUFFER_PATH
+    # ログファイルのディレクトリを作成
+    mkdir -p "$(dirname "$CSV_LOG_PATH")"
 
-    # --- 各タスクのループ ---
-    for task_id in ${!TASK_CLASSES[@]}; do
+
+    # --- CIL タスクループ (0からNUM_TASKS-1まで) ---
+    for i in $(seq 0 $(($NUM_TASKS - 1))); do
       
-      CLASSES_FOR_TASK=${TASK_CLASSES[$task_id]}
-      RUN_NAME="mem${mem_size}_bs${replay_bs}/task${task_id}"
+      TASK_NAME="Task_${i}"
+      OUTPUT_DIR="${RESULTS_DIR}/${SWEEP_NAME}/${TASK_NAME}"
+      GROUP_NAME="${SWEEP_NAME}" # WandBでのグループ名
 
-      echo "--- Training Task ${task_id} on classes ${CLASSES_FOR_TASK} ---"
+      echo "--- Training ${TASK_NAME} ---"
 
-      python3 train.py \
-          experiment=$EXPERIMENT_CONFIG \
+      # --- 学習コマンドの組み立て ---
+      CMD="python3 train.py \
+          experiment=${EXPERIMENT_CONFIG} \
+          dataset=uci_har_cil \
           train.seed=$SEED \
-          hydra.run.dir="/work/outputs/ltc-ncps/cil/er/${RUN_NAME}" \
-          train.pretrained_model_path="${last_path}" \
+          dataset.seed=$SEED \
+          dataset.task_id=$i \
+          trainer.max_epochs=$EPOCHS \
+          hydra.run.dir=$OUTPUT_DIR \
+          wandb.project=$WANDB_PROJECT \
+          wandb.group=$GROUP_NAME \
+          wandb.name=\"${SWEEP_NAME}-${TASK_NAME}\" \
+          callbacks.experiment_logger.output_file=$CSV_LOG_PATH \
           train.replay._name_=exact_replay \
           train.replay.memory_size=$mem_size \
           train.replay.batch_size=$replay_bs \
-          train.replay.buffer_path=$BUFFER_PATH \
+          train.replay.buffer_path=$BUFFER_PATH"
 
-        last_path="/work/outputs/ltc-ncps/cil/er/${RUN_NAME}/checkpoints/last.ckpt" # 次のタスクの初期化に使用
+      # Task 0 以外では、前のチェックポイントを読み込む
+      if [ -n "$LAST_CHECKPOINT_PATH" ]; then
+        CMD="$CMD train.pretrained_model_path=$LAST_CHECKPOINT_PATH"
+      fi
+      
+      # --- 学習の実行 ---
+      eval $CMD
+
+      # --- チェックポイントのパスを更新 ---
+      LAST_CHECKPOINT_PATH="${OUTPUT_DIR}/checkpoints/last.ckpt"
+      
+      # --- 過去タスクを含む全タスクでの評価 ---
+      echo "--- Evaluating ${TASK_NAME} model on all learned tasks (0 to ${i}) ---"
+      for j in $(seq 0 $i); do
+        
+        PAST_TASK_NAME="Task_${j}"
+        EVAL_DIR="${OUTPUT_DIR}/eval_on_${PAST_TASK_NAME}"
+        
+        echo "---   Testing on ${PAST_TASK_NAME} ---"
+        python3 train.py \
+            experiment=${EXPERIMENT_CONFIG} \
+            dataset=uci_har_cil \
+            train.seed=$SEED \
+            dataset.seed=$SEED \
+            dataset.task_id=$j \
+            hydra.run.dir=$EVAL_DIR \
+            train.pretrained_model_path=$LAST_CHECKPOINT_PATH \
+            train.test_only=true \
+            callbacks.experiment_logger.output_file=$CSV_LOG_PATH
+      done
+      echo "--------------------------------------------------"
+
+      echo "---  Training and evaluation Joint Training ---"
+      python3 train.py \
+          experiment=${EXPERIMENT_CONFIG} \
+          dataset=uci_har_cil \
+          train.seed=$SEED \
+          trainer.max_epochs=$EPOCHS \
+          dataset.seed=$SEED \
+          dataset.task_id=$i \
+          dataset.joint_training=true \
+          train.test=true \
+          callbacks.experiment_logger.output_file=$CSV_LOG_PATH
+
     done
-
-    # --- 全タスク学習後の最終評価 ---
-    # ここに、全タスクのテストデータを使った最終評価スクリプトの呼び出しなどを追加できます
-    echo "--- Final evaluation for sweep (mem ${mem_size}, bs ${replay_bs}) can be performed now ---"
-
+    echo "Sweep ${SWEEP_NAME} finished."
+    echo "=================================================================="
   done
 done
+
+echo "✅ All CIL experiments finished."
+echo "=================================================================="

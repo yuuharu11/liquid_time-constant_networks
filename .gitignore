@@ -20,5 +20,8 @@ csv/
 data/
 
 *.ipynb
+*.sh
 
 logs/
+
+
