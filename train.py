@@ -486,31 +486,34 @@ class SequenceLightningModule(pl.LightningModule):
 
     # Add hook when training finished
     def on_train_end(self):
-        if self.replay_mode == "exact_replay" and self.memory_size > 0  and self.hparams.dataset.seed == 0:
-            # --- Safety check: If buffer is already full, do nothing ---
-            # This prevents re-populating the buffer if you re-run Task 0.
-            if self.replay_buffer:
-                print("[yellow]Replay buffer already contains Task 0 data. Skipping update.[/yellow]")
-                return
+        if self.replay_mode == "exact_replay" and self.memory_size > 0:
+            
+            print(f"\n[cyan]Updating Replay Buffer with data from current task...[/cyan]")
+            
+            # 現在のタスクの訓練データを取得
+            current_task_data = self.train_dataloader()
+            current_task_data = [batch for batch in current_task_data]
+            # Reservoir Sampling を用いてバッファを更新
+            for new_sample in tqdm(current_task_data, desc="[ER] Sampling"):
+                if len(self.replay_buffer) < self.memory_size:
+                    # バッファがまだ満たされていない場合は、そのまま追加
+                    self.replay_buffer.append(new_sample)
+                else:
+                    # バッファが満杯の場合、確率的に置き換える
+                    # これまでに見た全サンプル数を考慮に入れる
+                    # （単純化のため、ここでは現在のバッファサイズとデータセットサイズで代用）
+                    j = random.randint(0, len(self.replay_buffer) + len(current_task_data) - 1)
+                    if j < self.memory_size:
+                        self.replay_buffer[j] = new_sample
 
-            print(f"\n[cyan]Capturing {self.memory_size} samples from Task 0 for the Replay Buffer...[/cyan]")
+            print(f"[green]Replay Buffer updated. Current size: {len(self.replay_buffer)}[/green]")
 
-            # 1. Determine the number of samples to add
-            num_samples_to_add = min(len(self.dataset.dataset_train), self.memory_size)
-
-            # 2. Randomly select samples from the Task 0 training dataset
-            indices = list(range(len(self.dataset.dataset_train)))
-            random.shuffle(indices)
-            for i in indices[:num_samples_to_add]:
-                self.replay_buffer.append(self.dataset.dataset_train[i])
-
-            # 3. Save the buffer to a file so it can be reloaded by later tasks
+            # 更新されたバッファを保存し、次のタスクで再利用できるようにする
             if self.buffer_path:
                 print(f"[cyan]Saving replay buffer to: {self.buffer_path}[/cyan]")
-                # Ensure the directory exists
                 os.makedirs(os.path.dirname(self.buffer_path), exist_ok=True)
                 torch.save(self.replay_buffer, self.buffer_path)
-                print(f"[green]Replay Buffer saved. Current size: {len(self.replay_buffer)}[/green]")
+                print(f"[green]Replay Buffer saved.[/green]")
 
         # ewc method
         if self.regularization_mode == "ewc" and self.regularization_lambda > 0 and self.hparams.dataset.seed == 0:
