@@ -25,7 +25,7 @@ from tqdm.auto import tqdm
 import src.models.nn.utils as U
 import src.utils as utils
 import src.utils.train
-from src.models.sequence.pnn import PNN
+from src.models.sequence import PNN  # Added by KS
 from src.dataloaders import SequenceDataset  # TODO make registry
 from src.tasks import decoders, encoders, tasks
 from src.utils import registry
@@ -141,6 +141,7 @@ class SequenceLightningModule(pl.LightningModule):
         self.save_hyperparameters(config, logger=False)
         self._init_replay()
         self._init_regularization()
+        self._init_architecture()
 
         # Dataset arguments
         self.dataset = SequenceDataset.registry[self.hparams.dataset._name_](
@@ -152,6 +153,8 @@ class SequenceLightningModule(pl.LightningModule):
 
         # PL has some bugs, so add hooks and make sure they're only called once
         self._has_setup = False
+
+        self.task_id = self.dataset.task_id  # For CIL, task_id should be set externally before training each task
 
         self.setup()  ## Added by KS
 
@@ -178,7 +181,6 @@ class SequenceLightningModule(pl.LightningModule):
         self.regularization_lambda = self.hparams.train.regularization.get("lambda", 0.0)
         self.param_path = self.hparams.train.regularization.get("param_path", None)
         self.max_ewc_datasize = self.hparams.train.regularization.get("max_ewc_datasize", 1000)
-        self.task_id = self.hparams.train.regularization.get("task_id", 0)  # For CIL, task_id should be set externally before training each task
         if self.regularization_mode == "none":
             print(f"[green]No regularization enabled.[/green]")
             return
@@ -191,22 +193,18 @@ class SequenceLightningModule(pl.LightningModule):
                 print(f"[green]EWC parameters loaded. Current size: {len(self.ewc_params)}[/green]")
     
     def _init_architecture(self):
-        arch_name = self.hparams.train.architecture.get("_name_", None)
-        if arch_name is None:
-            print(f"[yellow]No architecture modification specified.[/yellow]")
-            return
-        elif arch_name == "pnn":
+        self.arch_name = self.hparams.train.architecture.get("_name_", "none")
+        if self.arch_name == "pnn":
             print(f"[green]Progressive Neural Network (PNN) architecture enabled.[/green]")
-            # Wrap the existing model in a PNN structure
-            base_model_config = copy.deepcopy(self.hparams.model)
-            d_output = self.dataset.d_output
-            self.model = registry.model["pnn"](base_model_config, d_output)
-        elif arch_name == "packnet":
+            # PNNモデルをインスタンス化
+            # ベースとなるモデルの「設計図」を渡す
+
+            d_input = self.hparams.model.d_model
+            d_output = self.hparams.model.layer.units.output_units
+            units = self.hparams.model.layer.units.units
+            self.model = PNN(d_input, d_output)
+        elif self.arch_name == "packnet":
             print(f"[green]PackNet architecture enabled.[/green]")
-            # Implement PackNet initialization here if needed
-            pass
-        else:
-            raise ValueError(f"Unknown architecture modification: {arch_name}")
 
     def setup(self, stage=None):
         if not self.hparams.train.disable_dataset:
@@ -262,6 +260,12 @@ class SequenceLightningModule(pl.LightningModule):
 
         # Handle state logic
         self._initialize_state()
+
+        # カラムの追加
+        if self.arch_name == "pnn":
+            self.model.add_column(self.task_id)
+            if self.task_id > 0:
+                self.model.freeze_previous_columns()
 
     # Add: function to compute Fisher matrix for ewc
     def _compute_fisher_matrix(self, max_samples: Optional[int] = None):
@@ -590,6 +594,10 @@ class SequenceLightningModule(pl.LightningModule):
                 os.makedirs(os.path.dirname(self.param_path), exist_ok=True)
                 torch.save(self.ewc_params, self.param_path)
                 print(f"[green]EWC parameters saved to {self.param_path}[/green]")
+
+        # タスク終了時に新しいカラムの追加
+        if self.arch_name == "pnn":
+            self.model.add_column(self.task_id)
 
     def training_step(self, batch, batch_idx):
         loss = self._shared_step(batch, batch_idx, prefix="train")

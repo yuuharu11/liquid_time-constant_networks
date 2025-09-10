@@ -2,74 +2,83 @@ import copy
 import torch
 import torch.nn as nn
 from typing import Any, Dict, List
+
 import src.utils as utils
 from src.utils import registry
 
 class PNN(nn.Module):
-    """
-    Minimal PNN scaffolding.
-    - base_model_config: dict config for creating a single-column model (backbone+head).
-    - d_output: number of classes / output dim (kept for API compatibility).
-    Usage:
-        model = PNNSimple(base_model_config, d_output)
-        model.add_column(task_id=0)  # add first column
-        model.add_column(task_id=1)  # add second column when new task arrives
-    """
     def __init__(self, base_model_config: Dict[str, Any], d_output: int):
         super().__init__()
-        # Keep a copy of the base config to instantiate new columns
         self.base_model_config = copy.deepcopy(base_model_config)
         self.d_output = d_output
 
-        # Modules
-        self.columns: nn.ModuleList = nn.ModuleList()  # list of column modules
-        # lateral adapters: list of ModuleList (for each new column, adapters from previous columns)
-        self.laterals: List[nn.ModuleList] = []
-
-        # track task ids -> column idx mapping
+        # 各タスクのモデル（列）を格納
+        self.columns: nn.ModuleList = nn.ModuleList()
+        # 列ごと・層ごとの横方向接続パラメータ
+        self.laterals: nn.ModuleList = nn.ModuleList()
         self.task_to_col = {}
 
-    def _build_column(self):
-        # Instantiate a model column from base config using existing registry utils
-        # Expect base_model_config['_name_'] to refer to a backbone (not 'pnn' itself)
-        col = utils.instantiate(registry.model, copy.deepcopy(self.base_model_config))
+    def _build_column(self) -> nn.Module:
+        config = copy.deepcopy(self.base_model_config)
+        if config.get('_name_') == 'pnn':
+            config['_name_'] = 'base'
+        col = utils.instantiate(registry.model, config)
         return col
 
-    def add_column(self, task_id=None, freeze_prev=True):
-        """Add a new column for a new task.
-        If task_id provided, map it to this new column."""
-        col = self._build_column()
-        # create lateral adapters from all previous columns to this new column (identity by default)
-        adapters = nn.ModuleList()
-        for _ in range(len(self.columns)):
-            # default adapter: identity; replace with linear/conv as needed
-            adapters.append(nn.Identity())
-        self.columns.append(col)
-        self.laterals.append(adapters)
-        col_idx = len(self.columns) - 1
-        if task_id is not None:
-            self.task_to_col[task_id] = col_idx
+    def add_column(self, task_id: int, freeze_prev: bool = True):
+        if task_id in self.task_to_col:
+            print(f"Task {task_id} already has a column.")
+            return
 
-        # Freeze previous columns if requested
-        if freeze_prev and col_idx > 0:
-            for p in self.columns[col_idx - 1].parameters():
-                p.requires_grad = False
+        col = self._build_column()
+        self.columns.append(col)
+
+        # 横方向接続用パラメータを初期化
+        adapters = nn.ModuleList()
+        if len(self.columns) > 1:
+            for prev_col in self.columns[:-1]:
+                lateral_per_layer = nn.ModuleList()
+                for l_new, l_prev in zip(col.layers, prev_col.layers):
+                    lateral = nn.Linear(l_prev.out_features, l_new.out_features, bias=False)
+                    nn.init.zeros_(lateral.weight)
+                    lateral_per_layer.append(lateral)
+                adapters.append(lateral_per_layer)
+        self.laterals.append(adapters)
+
+        col_idx = len(self.columns) - 1
+        self.task_to_col[task_id] = col_idx
+
+        if freeze_prev:
+            self.freeze_previous_columns()
 
         return col_idx
 
-    def forward(self, x, **kwargs):
-        """
-        Forward through the column corresponding to current task.
-        kwargs may contain 'task_id' to select column; otherwise use last column.
-        """
-        task_id = kwargs.get("task_id", None)
-        if task_id is None:
-            col_idx = len(self.columns) - 1
-        else:
-            col_idx = self.task_to_col.get(task_id, len(self.columns) - 1)
+    def freeze_previous_columns(self):
+        num_columns = len(self.columns)
+        if num_columns <= 1:
+            return
+        for i in range(num_columns - 1):
+            for param in self.columns[i].parameters():
+                param.requires_grad = False
 
-        # simple forward: run target column only, optionally incorporate laterals
-        # (more advanced: combine previous columns' intermediate features via adapters)
-        col = self.columns[col_idx]
-        return col(x)
-# ...existing code...
+    def forward(self, x: torch.Tensor, **kwargs):
+        task_id = kwargs.get("task_id", None)
+        col_idx = self.task_to_col.get(task_id, len(self.columns) - 1)
+        target_column = self.columns[col_idx]
+
+        # 横方向接続付き forward
+        for layer_idx, layer in enumerate(target_column.layers):
+            x_new = layer(x)
+            lateral_sum = 0.0
+            for prev_idx, prev_col in enumerate(self.columns[:-1]):
+                prev_out = prev_col.layers[layer_idx](x)
+                lateral_layer = self.laterals[col_idx][prev_idx][layer_idx]
+                lateral_sum += lateral_layer(prev_out)
+            x = x_new + lateral_sum
+
+        # 出力層
+        output = target_column.output_layer(x)
+
+        # NCP/LTCの場合は state がある場合は返す
+        state = getattr(target_column, "state", None)
+        return output, state
