@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from pprint import pprint
 
-PATH = sys.argv[1] if len(sys.argv) > 1 else "/work/buffer/er_buffer_mem500_bs32.pt"
+PATH = sys.argv[1] if len(sys.argv) > 1 else "/work/buffer/ewc/lambda_lambda1000.pt"
 MAX_SHOW = 3  # 表示するサンプル数
 
 def summarize(obj, _depth=0):

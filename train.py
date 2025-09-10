@@ -177,7 +177,7 @@ class SequenceLightningModule(pl.LightningModule):
         self.regularization_lambda = self.hparams.train.regularization.get("lambda", 0.0)
         self.param_path = self.hparams.train.regularization.get("param_path", None)
         self.max_ewc_datasize = self.hparams.train.regularization.get("max_ewc_datasize", 1000)
-        self.task_id = self.hparams.train.get("task_id", 0)  # For CIL, task_id should be set externally before training each task
+        self.task_id = self.hparams.train.regularization.get("task_id", 0)  # For CIL, task_id should be set externally before training each task
         if self.regularization_mode == "none":
             print(f"[green]No regularization enabled.[/green]")
             return
@@ -556,9 +556,6 @@ class SequenceLightningModule(pl.LightningModule):
 
         # ewc method
         if self.regularization_mode == "ewc" and self.regularization_lambda > 0:
-            if 0 in self.ewc_params:
-                print(f"[cyan]EWC regularization is enabled. Skipping to Save EWC parameters for Task 0...[/cyan]")
-                return
             print(f"[green]Computing Fisher matrix for EWC regularization...[/green]")
             fisher_matrix = self._compute_fisher_matrix(max_samples=self.max_ewc_datasize)
             optimal_params = copy.deepcopy(self.model.state_dict())
