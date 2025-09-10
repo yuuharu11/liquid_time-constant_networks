@@ -23,5 +23,6 @@ data/
 *.sh
 
 logs/
+buffer/
 
 

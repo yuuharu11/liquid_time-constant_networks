@@ -2,15 +2,15 @@
 set -e
 
 # --- 実験設定 (編集箇所) ---
-EXPERIMENT_CONFIG="ltc_ncps/uci_har_cil" # Hydraの実験設定ファイル
-RESULTS_DIR="/work/outputs/ltc-ncps/cil/er_sweep" # 結果を保存するベースディレクトリ
+EXPERIMENT_CONFIG="ltc_ncps/uci_har" # Hydraの実験設定ファイル
+RESULTS_DIR="/work/outputs/ltc_ncps/cil/er_sweep" # 結果を保存するベースディレクトリ
 WANDB_PROJECT="UCI-HAR-CIL-ER-Sweep" # Weights & Biases のプロジェクト名
 SEED=42
 NUM_TASKS=5 # CILタスクの総数
 EPOCHS=30
 
 # --- ハイパーパラメータースイープ設定 ---
-MEMORY_SIZES=(500 1500 3000)
+MEMORY_SIZES=(100 250)
 REPLAY_BATCH_SIZES=(32 64 96)
 
 echo "🚀 Starting CIL with Experience Replay sweep for UCI-HAR..."
@@ -27,7 +27,7 @@ for mem_size in "${MEMORY_SIZES[@]}"; do
     # --- スイープごとの初期化 ---
     LAST_CHECKPOINT_PATH="" # 最初のタスクでは pretrained_model_path を使わない
     BUFFER_PATH="/work/buffer/er_buffer_${SWEEP_NAME}.pt"
-    CSV_LOG_PATH="${RESULTS_DIR}/${SWEEP_NAME}/log.csv"
+    CSV_LOG_PATH="/work/csv/uci-har/cil-er/${SWEEP_NAME}.csv"
 
     # 以前のバッファが残っていれば削除
     rm -f $BUFFER_PATH
@@ -102,7 +102,6 @@ for mem_size in "${MEMORY_SIZES[@]}"; do
           trainer.max_epochs=$EPOCHS \
           dataset.seed=$SEED \
           dataset.task_id=$i \
-          dataset.joint_training=true \
           train.test=true \
           callbacks.experiment_logger.output_file=$CSV_LOG_PATH
 

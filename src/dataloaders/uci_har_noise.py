@@ -57,6 +57,46 @@ class UCIHAR_DIL(SequenceDataset):
             X_test_clean = (X_test_clean - mean) / (std + 1e-8)
             
         if self.joint_training:
+            print(f"--- Creating joint training dataset for tasks 0 to {self.task_id} ---")
+            
+            X_train_list, X_test_list, y_train_list, y_test_list = [], [], [], []
+            
+            # 現在のタスクIDまでの全タスクのデータを生成・結合する
+            # (例: task_id=2 なら、タスク0, 1, 2 のデータセットを作成して結合)
+            for i in range(self.task_id + 1):
+                print(f"  - Generating data for task {i} with noise level {self.noise_level}...")
+                
+                # noise_level の値に応じて、ノイズ付加、無効化、またはクリーンなデータを適用
+                if self.noise_level > 0:
+                    # ガウシアンノイズを適用
+                    data_std = np.std(X_train_clean)
+                    noise_amplitude = data_std * self.noise_level
+                    x_train_tmp = self._apply_noise(X_train_clean, i, noise_amplitude)
+                    x_test_tmp = self._apply_noise(X_test_clean, i, noise_amplitude)
+                elif self.noise_level < 0:
+                    # センサー値を0にする無効化を適用
+                    x_train_tmp = self._invalid_input(X_train_clean, i)
+                    x_test_tmp = self._invalid_input(X_test_clean, i)
+                else: # noise_level == 0
+                    # クリーンなデータを使用
+                    x_train_tmp = X_train_clean
+                    x_test_tmp = X_test_clean
+
+                X_train_list.append(x_train_tmp)
+                X_test_list.append(x_test_tmp)
+                y_train_list.append(y_train)
+                y_test_list.append(y_test)
+
+            # 全タスクのデータをまとめて連結
+            X_train = np.concatenate(X_train_list, axis=0)
+            X_test = np.concatenate(X_test_list, axis=0)
+            y_train = np.concatenate(y_train_list, axis=0)
+            y_test = np.concatenate(y_test_list, axis=0)
+            
+            print(f"--- Joint training dataset created. Total samples: {len(X_train)} ---")
+
+
+            """ ノイズdil
             t = self.task_id
             current_nl = self.noise_level
 
@@ -77,6 +117,7 @@ class UCIHAR_DIL(SequenceDataset):
             X_test = np.concatenate(X_test_list, axis=0)
             y_train = np.concatenate(y_train_list, axis=0)
             y_test = np.concatenate(y_test_list, axis=0)
+            """
         else:
             if self.noise_level > 0:
                 print(f"Applying Gaussian noise (level: {self.noise_level}) to sensor group {self.task_id}...")

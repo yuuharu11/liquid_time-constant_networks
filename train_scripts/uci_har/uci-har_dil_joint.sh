@@ -3,16 +3,15 @@ set -e
 
 # --- 実験設定 ---
 # ループで実行したいモデルのリスト
-MODELS=("ltc_ncps") 
+MODELS=("rnn" "cnn" "lstm" "ltc_ncps") 
 EXPERIMENT_BASE="uci_har"
 RESULTS_BASE="/work/outputs"
-CSV_BASE="/work/csv/uci-har/dil/im" # 結果を保存するCSVのパス
+CSV_BASE="/work/csv/uci-har/dil-ex/im" # 結果を保存するCSVのパス
 SEED=42
 
 # ループで試したいノイズレベルのリスト
-NOISE_LEVELS=("0.0" "0.1" "0.2" "0.3" "0.4" "0.5" "0.6" "0.7" "0.8" "0.9" "1.0")
-# 評価対象のタスクID（6 = 全てのセンサー）
-TASK_ID=6 
+TASK_ID=(0 1 2 3 4 5 6)
+NOISE_LEVEL=-1.0
 
 # --- モデルループ (一番外側) ---
 for MODEL in "${MODELS[@]}"; do
@@ -26,9 +25,9 @@ for MODEL in "${MODELS[@]}"; do
     echo "=================================================================="
 
     # --- Noise Level ループ (内側) ---
-    for NOISE_LEVEL in "${NOISE_LEVELS[@]}"; do
+    for task_id in "${TASK_ID[@]}"; do
 
-        TASK_NAME="TaskID_${TASK_ID}_Noise_${NOISE_LEVEL}"
+        TASK_NAME="TaskID_${task_id}_Noise_${NOISE_LEVEL}"
         echo "---   Testing with Noise Level: ${NOISE_LEVEL} ---"
 
         python3 train.py \
@@ -37,7 +36,7 @@ for MODEL in "${MODELS[@]}"; do
             train.seed=$SEED \
             dataset.seed=$SEED \
             dataset=uci_har_dil \
-            dataset.task_id=$TASK_ID \
+            dataset.task_id=$task_id \
             dataset.noise_level=$NOISE_LEVEL \
             dataset.joint_training=true \
             train.test=true \

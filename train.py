@@ -490,30 +490,40 @@ class SequenceLightningModule(pl.LightningModule):
             
             print(f"\n[cyan]Updating Replay Buffer with data from current task...[/cyan]")
             
-            # 現在のタスクの訓練データを取得
-            current_task_data = self.train_dataloader()
-            current_task_data = [batch for batch in current_task_data]
-            # Reservoir Sampling を用いてバッファを更新
-            for new_sample in tqdm(current_task_data, desc="[ER] Sampling"):
-                if len(self.replay_buffer) < self.memory_size:
-                    # バッファがまだ満たされていない場合は、そのまま追加
-                    self.replay_buffer.append(new_sample)
-                else:
-                    # バッファが満杯の場合、確率的に置き換える
-                    # これまでに見た全サンプル数を考慮に入れる
-                    # （単純化のため、ここでは現在のバッファサイズとデータセットサイズで代用）
-                    j = random.randint(0, len(self.replay_buffer) + len(current_task_data) - 1)
-                    if j < self.memory_size:
-                        self.replay_buffer[j] = new_sample
+            # train_dataloader を実際に反復して「サンプル単位」で reservoir sampling を行う
+            loader = self.train_dataloader()
+            seen = 0
 
-            print(f"[green]Replay Buffer updated. Current size: {len(self.replay_buffer)}[/green]")
+            for batch in tqdm(loader, desc="[ER] Sampling"):
+                # ensure batch is a tuple/list of elements
+                batch = tuple(
+                    b.detach().cpu() if isinstance(b, torch.Tensor) else b
+                    for b in batch
+                )
 
-            # 更新されたバッファを保存し、次のタスクで再利用できるようにする
-            if self.buffer_path:
-                print(f"[cyan]Saving replay buffer to: {self.buffer_path}[/cyan]")
-                os.makedirs(os.path.dirname(self.buffer_path), exist_ok=True)
-                torch.save(self.replay_buffer, self.buffer_path)
-                print(f"[green]Replay Buffer saved.[/green]")
+                batch_size = batch[0].shape[0]
+
+                for i in range(batch_size):
+                    seen += 1
+                    sample = tuple(
+                        item[i] if isinstance(item, torch.Tensor) else item
+                        for item in batch
+                    )
+
+                    sample = tuple(s for s in sample if not isinstance(s, dict))  # remove dict items (e.g. reset info)
+
+                    # reservoir sampling
+                    if len(self.replay_buffer) < self.memory_size:
+                        self.replay_buffer.append(sample)
+                    else:
+                        j = random.randint(0, seen - 1)
+                        if j < self.memory_size:
+                            self.replay_buffer[j] = sample
+
+            make_dir = os.path.dirname(self.buffer_path)
+            os.makedirs(make_dir, exist_ok=True)
+            torch.save(self.replay_buffer, self.buffer_path)
+            print(f"[cyan]Replay buffer saved to {self.buffer_path}[/cyan]")
 
         # ewc method
         if self.regularization_mode == "ewc" and self.regularization_lambda > 0 and self.hparams.dataset.seed == 0:
