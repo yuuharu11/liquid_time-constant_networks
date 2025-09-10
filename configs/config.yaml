@@ -66,6 +66,9 @@ train:
     max_ewc_datasize: 1000 # Maximum number of data points to use
     task_id: 0 # Task ID for CIL, should be set externally before training each task
 
+  architecture:
+    _name_: null # [pnn, packnet]Architecture specific modifications to the model
+
 
 tolerance: # fault tolerance for training on preemptible machines
   logdir: ./resume

@@ -25,6 +25,7 @@ from tqdm.auto import tqdm
 import src.models.nn.utils as U
 import src.utils as utils
 import src.utils.train
+from src.models.sequence.pnn import PNN
 from src.dataloaders import SequenceDataset  # TODO make registry
 from src.tasks import decoders, encoders, tasks
 from src.utils import registry
@@ -189,6 +190,24 @@ class SequenceLightningModule(pl.LightningModule):
                 self.ewc_params = torch.load(self.param_path)
                 print(f"[green]EWC parameters loaded. Current size: {len(self.ewc_params)}[/green]")
     
+    def _init_architecture(self):
+        arch_name = self.hparams.train.architecture.get("_name_", None)
+        if arch_name is None:
+            print(f"[yellow]No architecture modification specified.[/yellow]")
+            return
+        elif arch_name == "pnn":
+            print(f"[green]Progressive Neural Network (PNN) architecture enabled.[/green]")
+            # Wrap the existing model in a PNN structure
+            base_model_config = copy.deepcopy(self.hparams.model)
+            d_output = self.dataset.d_output
+            self.model = registry.model["pnn"](base_model_config, d_output)
+        elif arch_name == "packnet":
+            print(f"[green]PackNet architecture enabled.[/green]")
+            # Implement PackNet initialization here if needed
+            pass
+        else:
+            raise ValueError(f"Unknown architecture modification: {arch_name}")
+
     def setup(self, stage=None):
         if not self.hparams.train.disable_dataset:
             self.dataset.setup()
