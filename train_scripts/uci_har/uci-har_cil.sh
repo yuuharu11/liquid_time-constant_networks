@@ -2,7 +2,7 @@
 set -e
 
 # --- 実験設定 ---
-MODELS=("rnn" "cnn" "lstm" "ltc_ncps")
+MODELS=("ltc_ncps")
 EXPERIMENT_BASE="uci_har"
 WANDB_PROJECT="UCI-HAR-CIL"
 SEED=42
@@ -23,7 +23,7 @@ for MODEL in "${MODELS[@]}"; do
     TASK_NAME="Task_${i}"
     OUTPUT_DIR="${RESULTS_DIR}/${TASK_NAME}"
     
-    EPOCHS=30
+    EPOCHS=3
 
     echo "--- [Phase 1] Training on ${TASK_NAME} ---"
     python3 train.py \
@@ -35,11 +35,11 @@ for MODEL in "${MODELS[@]}"; do
       train.pretrained_model_path=$LAST_CHECKPOINT_PATH \
       train.test=true \
       trainer.max_epochs=$EPOCHS \
-      hydra.run.dir=$OUTPUT_DIR \
-      wandb.project=$WANDB_PROJECT \
-      wandb.group=$GROUP_NAME \
-      wandb.name="${MODEL^^}-${TASK_NAME}" \
-      callbacks.experiment_logger.output_file=$CSV_LOG_PATH
+      #hydra.run.dir=$OUTPUT_DIR \
+      #wandb.project=$WANDB_PROJECT \
+      #wandb.group=$GROUP_NAME \
+      #wandb.name="${MODEL^^}-${TASK_NAME}" \
+      #callbacks.experiment_logger.output_file=$CSV_LOG_PATH
 
     CHECKPOINT_JUST_TRAINED="${OUTPUT_DIR}/checkpoints/last.ckpt"
     LAST_CHECKPOINT_PATH=$CHECKPOINT_JUST_TRAINED

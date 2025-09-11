@@ -196,13 +196,7 @@ class SequenceLightningModule(pl.LightningModule):
         self.arch_name = self.hparams.train.architecture.get("_name_", "none")
         if self.arch_name == "pnn":
             print(f"[green]Progressive Neural Network (PNN) architecture enabled.[/green]")
-            # PNNモデルをインスタンス化
-            # ベースとなるモデルの「設計図」を渡す
-
-            d_input = self.hparams.model.d_model
-            d_output = self.hparams.model.layer.units.output_units
-            units = self.hparams.model.layer.units.units
-            self.model = PNN(d_input, d_output)
+            
         elif self.arch_name == "packnet":
             print(f"[green]PackNet architecture enabled.[/green]")
 
@@ -263,8 +257,14 @@ class SequenceLightningModule(pl.LightningModule):
 
         # カラムの追加
         if self.arch_name == "pnn":
+            base_cfg=copy.deepcopy(self.hparams.model)
+            d_input = self.hparams.model.d_model
+            d_output = next((item for item in self.hparams.model.layer.units if 'output_units' in item), None)['output_units']
+            units = next((item for item in self.hparams.model.layer.units if 'units' in item), None)['units']
+            self.model = PNN(base_cfg, d_output)
             self.model.add_column(self.task_id)
             if self.task_id > 0:
+                print("Freezing previous columns")
                 self.model.freeze_previous_columns()
 
     # Add: function to compute Fisher matrix for ewc

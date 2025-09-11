@@ -25,12 +25,19 @@ class PNN(nn.Module):
         col = utils.instantiate(registry.model, config)
         return col
 
-    def add_column(self, task_id: int, freeze_prev: bool = True):
+    def add_column(self, task_id: int):
         if task_id in self.task_to_col:
             print(f"Task {task_id} already has a column.")
             return
-
+        print(f"Adding column for task {task_id}")
         col = self._build_column()
+
+        units_config = self.base_model_config.get("layer", {}).get("units", [])
+        output_units = next((u.get("output_units") for u in units_config if "output_units" in u), None)
+        if output_units is None:
+            raise ValueError("output_units が設定にありません")
+        col.output_layer = nn.Linear(output_units, self.d_output)
+
         self.columns.append(col)
 
         # 横方向接続用パラメータを初期化
@@ -47,9 +54,6 @@ class PNN(nn.Module):
 
         col_idx = len(self.columns) - 1
         self.task_to_col[task_id] = col_idx
-
-        if freeze_prev:
-            self.freeze_previous_columns()
 
         return col_idx
 
@@ -68,7 +72,11 @@ class PNN(nn.Module):
 
         # 横方向接続付き forward
         for layer_idx, layer in enumerate(target_column.layers):
-            x_new = layer(x)
+            result = layer(x)
+            if isinstance(result, tuple):
+                x_new, state_new = result
+            else:
+                x_new, state_new = result, None
             lateral_sum = 0.0
             for prev_idx, prev_col in enumerate(self.columns[:-1]):
                 prev_out = prev_col.layers[layer_idx](x)
@@ -79,6 +87,4 @@ class PNN(nn.Module):
         # 出力層
         output = target_column.output_layer(x)
 
-        # NCP/LTCの場合は state がある場合は返す
-        state = getattr(target_column, "state", None)
-        return output, state
+        return output, state_new
