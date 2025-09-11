@@ -261,10 +261,11 @@ class SequenceLightningModule(pl.LightningModule):
             d_input = self.hparams.model.d_model
             d_output = next((item for item in self.hparams.model.layer.units if 'output_units' in item), None)['output_units']
             units = next((item for item in self.hparams.model.layer.units if 'units' in item), None)['units']
-            self.model = PNN(base_cfg, d_output)
+            self.model = PNN(base_cfg, d_output, self.task_id)
             self.model.add_column(self.task_id)
+            print(f"[green]Adding column for task {self.task_id}[/green]")
             if self.task_id > 0:
-                print("Freezing previous columns")
+                print("[yellow]Freezing previous columns[/yellow]")
                 self.model.freeze_previous_columns()
 
     # Add: function to compute Fisher matrix for ewc
@@ -897,8 +898,26 @@ def train(config):
         trainer.validate(model)
     if config.train.test_only:
         if config.train.ckpt is not None:
-            model = SequenceLightningModule.load_from_checkpoint(config.train.ckpt)
-            trainer.test(model, ckpt_path=config.train.ckpt)
+            print(f"[cyan]Resuming from checkpoint: {config.train.ckpt}[/cyan]")
+        
+            # 1. チェックポイントからハイパーパラメータ（hparams）だけを先に読み込む
+            ckpt_path = config.train.ckpt
+            # cpuにロードすることで、GPUがない環境でもエラーを防ぐ
+            ckpt_hparams = torch.load(ckpt_path, map_location='cpu')['hyper_parameters']
+
+            # 2. 読み込んだhparamsを使って、モデルのインスタンスを生成する
+            #    これにより、保存時と全く同じ構造のモデル（PNNの器）が作られる
+            #    __init__ -> setup() の流れでPNNの構造が正しく構築される
+            model = SequenceLightningModule(ckpt_hparams)
+            
+            # 3. チェックポイントから重み（state_dict）だけを読み込む
+            state_dict = torch.load(ckpt_path, map_location='cpu')['state_dict']
+
+            # 4. 構造が正しく作られたモデルに、重みをロードする
+            model.load_state_dict(state_dict)
+
+            # 5. テストを実行 (ckpt_path=Noneにすることで、再読み込みを防ぐ)
+            trainer.test(model, ckpt_path=None)
         elif config.train.pretrained_model_path is not None:
             state_dict = torch.load(config.train.pretrained_model_path)['state_dict']
             model.load_state_dict(state_dict, strict=False)
@@ -908,10 +927,24 @@ def train(config):
             sys.exit(1)
     else:
         if config.train.ckpt is not None:
+            print(f"[cyan]Resuming from checkpoint: {config.train.ckpt}[/cyan]")
+        
+            # 1. チェックポイントからハイパーパラメータ(hparams)を読み込む
+            ckpt = torch.load(config.train.ckpt, map_location=lambda storage, loc: storage)
+            ckpt_hparams = ckpt['hyper_parameters']
+            
+            # 2. フックのように振る舞う上書き処理
+            #    新しいconfigの値で、古いhparamsを更新（上書き）する
+            #    OmegaConf.merge を使うと、ネストされた辞書も賢くマージしてくれる
+            updated_hparams = OmegaConf.merge(ckpt_hparams, config)
+
+            # 3. 上書きされたhparamsでモデルを読み込む
             model = SequenceLightningModule.load_from_checkpoint(
                 config.train.ckpt,
-                config=config 
+                config=updated_hparams # 更新されたconfigを渡す
             )
+            
+            # 4. トレーナーに渡して学習再開
             trainer.fit(model, ckpt_path=config.train.ckpt)
         elif config.train.pretrained_model_path is not None:
             state_dict = torch.load(config.train.pretrained_model_path)['state_dict']

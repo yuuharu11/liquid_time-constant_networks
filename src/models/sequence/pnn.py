@@ -7,16 +7,17 @@ import src.utils as utils
 from src.utils import registry
 
 class PNN(nn.Module):
-    def __init__(self, base_model_config: Dict[str, Any], d_output: int):
+    def __init__(self, base_model_config: Dict[str, Any], d_output: int, task_id: int = 0):
         super().__init__()
         self.base_model_config = copy.deepcopy(base_model_config)
         self.d_output = d_output
+        self.task_id = task_id
+        self.task_to_col: Dict[int, int] = {}
 
         # 各タスクのモデル（列）を格納
         self.columns: nn.ModuleList = nn.ModuleList()
         # 列ごと・層ごとの横方向接続パラメータ
         self.laterals: nn.ModuleList = nn.ModuleList()
-        self.task_to_col = {}
 
     def _build_column(self) -> nn.Module:
         config = copy.deepcopy(self.base_model_config)
@@ -29,7 +30,6 @@ class PNN(nn.Module):
         if task_id in self.task_to_col:
             print(f"Task {task_id} already has a column.")
             return
-        print(f"Adding column for task {task_id}")
         col = self._build_column()
 
         units_config = self.base_model_config.get("layer", {}).get("units", [])
@@ -53,7 +53,7 @@ class PNN(nn.Module):
                 adapters.append(lateral_per_layer)
         self.laterals.append(adapters)
         """
-        
+
         col_idx = len(self.columns) - 1
         self.task_to_col[task_id] = col_idx
 
@@ -66,9 +66,12 @@ class PNN(nn.Module):
                 param.requires_grad = False
 
     def forward(self, x: torch.Tensor, **kwargs):
-        task_id = kwargs.get("task_id", None)
-        col_idx = self.task_to_col.get(task_id, len(self.columns) - 1)
+        if self.task_id not in self.task_to_col:
+            raise ValueError(f"Task {self.task_id} に対応するカラムがありません")
+        col_idx = self.task_to_col[self.task_id]
         target_column = self.columns[col_idx]
+
+        all_states = []
 
         # 横方向接続付き forward
         for layer_idx, layer in enumerate(target_column.layers):
@@ -77,6 +80,7 @@ class PNN(nn.Module):
                 x_new, state_new = result
             else:
                 x_new, state_new = result, None
+            all_states.append(state_new)
             lateral_sum = 0.0
             for prev_idx, prev_col in enumerate(self.columns[:-1]):
                 prev_out = prev_col.layers[layer_idx](x)
@@ -87,4 +91,4 @@ class PNN(nn.Module):
         # 出力層
         output = target_column.output_layer(x)
 
-        return output, state_new
+        return output, all_states
