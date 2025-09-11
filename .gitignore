@@ -14,12 +14,8 @@ wandb/
 .vscode/
 .idea/
 
-csv/
-*.csv
-
 data/
 
-*.ipynb
 *.sh
 
 logs/

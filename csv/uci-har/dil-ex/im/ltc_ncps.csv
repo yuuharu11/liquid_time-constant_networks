@@ -1,0 +1,8 @@
+﻿phase_type,noise_level,task,テスト精度 (Test Acc),平均レイテンシ (ms/バッチ),p95 レイテンシ (ms/バッチ),推論時 Memory Allocated [MB],推論時 Memory Reserved [MB],学習時間/epoch,訓練時 Memory Allocated [MB],訓練時 Memory Reserved [MB],検証精度 (Val Acc),チェックポイントパス
+training,-1.0,0,0.881428599357605,63.54757308959961,72.12081146240234,36.39854049682617,48.0,,,,,/work/outputs/2025-09-10/06-24-56-448201/checkpoints/val/accuracy.ckpt
+training,-1.0,1,0.9096551537513733,62.68352508544922,67.52281951904297,36.39853286743164,48.0,,,,,/work/outputs/2025-09-10/06-26-41-106923/checkpoints/val/accuracy.ckpt
+training,-1.0,2,0.9046590924263,63.26931381225586,67.15555572509766,36.398468017578125,48.0,,,,,/work/outputs/2025-09-10/06-29-52-879253/checkpoints/val/accuracy.ckpt
+training,-1.0,3,0.8727586269378662,65.79976654052734,72.82884216308594,36.398460388183594,48.0,,,,,/work/outputs/2025-09-10/06-34-28-586277/checkpoints/val/accuracy.ckpt
+training,-1.0,4,0.8743835687637329,66.440673828125,71.30780029296875,36.398475646972656,48.0,,,,,/work/outputs/2025-09-10/06-40-49-942361/checkpoints/val/accuracy.ckpt
+training,-1.0,5,0.8734090924263,66.30989074707031,69.38920593261719,36.39845275878906,48.0,,,,,/work/outputs/2025-09-10/06-48-35-381727/checkpoints/val/accuracy.ckpt
+training,-1.0,6,0.7717961072921753,65.92253875732422,69.3387222290039,36.39846420288086,50.0,,,,,/work/outputs/2025-09-10/06-57-59-763999/checkpoints/val/accuracy.ckpt

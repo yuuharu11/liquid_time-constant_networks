@@ -1,0 +1,17 @@
+﻿phase,phase_type,train_seed,test_seed,データセット,batch,model.n_layers,model.d_model,units,output_units,エポック数,ode_solver_unfolds,検証精度 (Val Acc),テスト精度 (Test Acc),平均レイテンシ (ms/バッチ),p95 レイテンシ (ms/バッチ),学習時間/epoch,訓練時 Memory Allocated [MB],訓練時 Memory Reserved [MB],推論時 Memory Allocated [MB],推論時 Memory Reserved [MB],チェックポイントパス,wandbリンク
+test_only,inference,-1,42,,,,,,,N/A,,,0.9171428680419922,64.98330688476562,70.935546875,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/gmxgihj9
+test_only,inference,-1,42,,,,,,,N/A,,,0.9160714149475098,61.22459030151367,63.02177810668945,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/ytohhaet
+test_only,inference,-1,42,,,,,,,N/A,,,0.8985714316368103,61.32650375366211,63.4324951171875,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/6i0y6o8z
+test_only,inference,-1,42,,,,,,,N/A,,,0.8892857432365417,61.71057891845703,64.22979736328125,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/vbjkrrm0
+test_only,inference,-1,42,,,,,,,N/A,,,0.8735714554786682,61.49396896362305,64.57247161865234,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/i2cqyf2z
+test_only,inference,-1,42,,,,,,,N/A,,,0.7871428728103638,61.496158599853516,63.36627197265625,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/gwpqky94
+test_only,inference,-1,42,,,,,,,N/A,,,0.6992856860160828,61.781837463378906,64.79031372070312,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/2g64buhk
+test_only,inference,-1,42,,,,,,,N/A,,,0.6607142686843872,61.9812126159668,65.29051971435547,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/d49g7qwd
+test_only,inference,-1,42,,,,,,,N/A,,,0.6410714387893677,61.465614318847656,63.84296417236328,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/r10qt5dc
+test_only,inference,-1,42,,,,,,,N/A,,,0.6207143068313599,62.29085922241211,67.17393493652344,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/9nbwg891
+test_only,inference,-1,42,,,,,,,N/A,,,0.6025000214576721,61.31352996826172,63.33363342285156,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/ytrzvjc2
+test_only,inference,-1,42,,,,,,,N/A,,,0.5646428465843201,61.447845458984375,65.10069274902344,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/2mm56jq8
+test_only,inference,-1,42,,,,,,,N/A,,,0.5203571319580078,61.031795501708984,65.3348617553711,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/0033ocif
+test_only,inference,-1,42,,,,,,,N/A,,,0.4757142961025238,60.61293411254883,68.92086029052734,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/ekim5ute
+test_only,inference,-1,42,,,,,,,N/A,,,0.4303571283817291,61.43968963623047,66.32518768310547,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/o98kbw3p
+test_only,inference,-1,42,,,,,,,N/A,,,0.39250001311302185,62.59135055541992,64.44490814208984,,,,36.78672409057617,49.47368240356445,N/A,https://wandb.ai/yuuharuharuya1120-japan/default/runs/3ih0zbuh

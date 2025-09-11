@@ -40,6 +40,7 @@ class PNN(nn.Module):
 
         self.columns.append(col)
 
+        """
         # 横方向接続用パラメータを初期化
         adapters = nn.ModuleList()
         if len(self.columns) > 1:
@@ -51,11 +52,10 @@ class PNN(nn.Module):
                     lateral_per_layer.append(lateral)
                 adapters.append(lateral_per_layer)
         self.laterals.append(adapters)
-
+        """
+        
         col_idx = len(self.columns) - 1
         self.task_to_col[task_id] = col_idx
-
-        return col_idx
 
     def freeze_previous_columns(self):
         num_columns = len(self.columns)

@@ -595,10 +595,6 @@ class SequenceLightningModule(pl.LightningModule):
                 torch.save(self.ewc_params, self.param_path)
                 print(f"[green]EWC parameters saved to {self.param_path}[/green]")
 
-        # タスク終了時に新しいカラムの追加
-        if self.arch_name == "pnn":
-            self.model.add_column(self.task_id)
-
     def training_step(self, batch, batch_idx):
         loss = self._shared_step(batch, batch_idx, prefix="train")
 
