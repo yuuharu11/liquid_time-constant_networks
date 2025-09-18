@@ -11,29 +11,29 @@ class UCIHAR_CIL(SequenceDataset):
     l_output = 0 #絶対に必要 ないとdecoderでエラーが出る
     L = 128
 
-    def __init__(self, data_dir=None, val_split=0.2, seed=42, task_id=0, **kwargs):
+    def __init__(self, data_dir=None, val_split=0.2, seed=42, task_id=0, overall=False, **kwargs):
         self.data_dir = data_dir
         self.val_split = val_split
         self.seed = seed
         self.task_id = task_id
-        
+        self.overall = overall
+
         # --- CILシナリオの定義 ---
         # 各タスクで学習する「新しい」クラスのリスト
         self.tasks = [
-            [3, 4],  # SITTING, STANDING
-            [5],     # LAYING
-            [0],     # WALKING
-            [1],     # WALKING_UPSTAIRS
-            [2]      # WALKING_DOWNSTAIRS
+            [0,1],
+            [2,3],
+            [4,5],
         ]
-        # UCI-HAR Labels: 0-WALKING, 1-WALKING_UPSTAIRS, 2-WALKING_DOWNSTAIRS,
-        #                 3-SITTING, 4-STANDING, 5-LAYING
+        # UCI-HAR Labels: 0-WALKING, 1-WALKING_UPSTAIRS, 2-WALKING_DOWNSTAIRS, 3-SITTING, 4-STANDING, 5-LAYING
 
         # これまでの全タスクのクラスを結合
         self.visible_classes = []
-        for i in range(task_id + 1):
-            self.visible_classes.extend(self.tasks[i])
-
+        if overall:
+            for i in range(task_id + 1):
+                self.visible_classes.extend(self.tasks[i])
+        else:
+            self.visible_classes = self.tasks[task_id]
         # setup呼び出し
         self.setup()
 
@@ -72,23 +72,24 @@ class UCIHAR_CIL(SequenceDataset):
         n_train_samples = len(X_train_visible)
         indices = np.random.permutation(n_train_samples)
         val_size = int(n_train_samples * self.val_split)
+        val_indices = indices[-val_size:]
         train_indices = indices[:-val_size]
 
-        X_train_split = X_train_visible[train_indices]
-        y_train_split = y_train_visible[train_indices]
+        X_train_split, y_train_split = X_train_visible[train_indices], y_train_visible[train_indices]
+        X_val_split, y_val_split = X_train_visible[val_indices], y_train_visible[val_indices]
 
         # 正規化
         if getattr(self, "normalize", True):
             mean = np.mean(X_train_split, axis=(0, 1), keepdims=True)
             std = np.std(X_train_split, axis=(0, 1), keepdims=True)
             X_train_split = (X_train_split - mean) / (std + 1e-8)
+            X_val_split = (X_val_split - mean) / (std + 1e-8)
             X_test_visible = (X_test_visible - mean) / (std + 1e-8)
 
         # TensorDataset化
         self.dataset_train = torch.utils.data.TensorDataset(torch.from_numpy(X_train_split).float(), torch.from_numpy(y_train_split).long())
         self.dataset_test = torch.utils.data.TensorDataset(torch.from_numpy(X_test_visible).float(), torch.from_numpy(y_test_visible).long())
-
-        self.split_train_val(self.val_split)
+        self.dataset_val = torch.utils.data.TensorDataset(torch.from_numpy(X_val_split).float(), torch.from_numpy(y_val_split).long())
 
     def _to_tensor_dataset(self, x, y):
         x_tensor = torch.from_numpy(x).float().permute(0, 2, 1)
