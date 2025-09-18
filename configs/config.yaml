@@ -68,6 +68,7 @@ train:
 
   architecture:
     _name_: null # [pnn, packnet]Architecture specific modifications to the model
+    pruning_rate: 0.0 # Pruning rate for PackNet, only used if architecture is packnet
 
 
 tolerance: # fault tolerance for training on preemptible machines

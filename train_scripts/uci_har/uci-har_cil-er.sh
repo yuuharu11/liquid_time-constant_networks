@@ -11,7 +11,7 @@ EPOCHS=10
 
 # --- ハイパーパラメータースイープ設定 ---
 MEMORY_SIZES=(0 50 100 500 1000 5000)
-REPLAY_BATCH_SIZES=(10 50 100 500)
+REPLAY_BATCH_SIZES=(10 50 100)
 
 echo "🚀 Starting CIL with Experience Replay sweep for UCI-HAR..."
 echo "=================================================================="
@@ -21,13 +21,13 @@ for seed in "${SEEDS[@]}"; do
   for mem_size in "${MEMORY_SIZES[@]}"; do
     for replay_bs in "${REPLAY_BATCH_SIZES[@]}"; do
 
-      SWEEP_NAME="seed${seed}_mem${mem_size}_bs${replay_bs}"
+      SWEEP_NAME="seed${seed}/mem${mem_size}/bs${replay_bs}"
       echo ""
       echo "--- Running Sweep: ${SWEEP_NAME} ---"
 
       LAST_CHECKPOINT_PATH=""
       BUFFER_PATH="/work/buffer/cil_each/er_buffer_${SWEEP_NAME}.pt"
-      CSV_LOG_PATH="/work/csv/uci-har/cil-each/er/${SWEEP_NAME}.csv"
+      CSV_LOG_PATH="/work/csv/uci-har/cil_each/er/${SWEEP_NAME}.csv"
 
       rm -f $BUFFER_PATH
       mkdir -p "$(dirname "$CSV_LOG_PATH")"
