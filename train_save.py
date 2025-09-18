@@ -25,7 +25,7 @@ from tqdm.auto import tqdm
 import src.models.nn.utils as U
 import src.utils as utils
 import src.utils.train
-from src.models.continual_learning.architecture import PNN, SparsePruner
+from src.models.sequence import PNN  # Added by KS
 from src.dataloaders import SequenceDataset  # TODO make registry
 from src.tasks import decoders, encoders, tasks
 from src.utils import registry
@@ -42,7 +42,6 @@ import torch.backends
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
-import torch.nn.utils.prune as prune #for pruning
 
 # Lots of annoying hacks to get WandbLogger to continuously retry on failure
 class DummyExperiment:
@@ -268,23 +267,6 @@ class SequenceLightningModule(pl.LightningModule):
             if self.task_id > 0:
                 print("[yellow]Freezing previous columns[/yellow]")
                 self.model.freeze_previous_columns()
-
-        elif self.arch_name == "packnet":
-            if not hasattr(self, "previous_masks"):
-                self.previous_masks = {}
-            self.model = SparsePruner(
-                self.model,
-                pruning_rate=self.hparams.train.architecture.get("pruning_rate", 0.5),
-                previous_masks=self.previous_masks,
-                train_bias=True,
-                train_bn=True,
-                )
-            print(f"[green]Initialized PackNet with pruning rate {self.hparams.train.architecture.get('pruning_rate', 0.5)}[/green]")
-            if self.task_id > 0:
-                self.model.prune()
-                self.model.make_pruned_zero()
-            self.model.make_finetuning_mask()
-            self.previous_masks = self.model.current_masks
 
     # Add: function to compute Fisher matrix for ewc
     def _compute_fisher_matrix(self, max_samples: Optional[int] = None):
@@ -613,13 +595,6 @@ class SequenceLightningModule(pl.LightningModule):
                 os.makedirs(os.path.dirname(self.param_path), exist_ok=True)
                 torch.save(self.ewc_params, self.param_path)
                 print(f"[green]EWC parameters saved to {self.param_path}[/green]")
-        elif self.arch_name=="packnet":
-            print(f"[green]Pruning and freezing weights for PackNet...[/green]")
-            print(f"[green]PackNet weights pruned and frozen for task {self.task_id}.[/green]")
-            self.model.prune()
-            self.previous_masks = self.model.current_masks
-            self.model.make_finetuning_mask()
-            print(f"[PackNet] Task {self.task_id} pruning finalized.")
 
     def training_step(self, batch, batch_idx):
         loss = self._shared_step(batch, batch_idx, prefix="train")
