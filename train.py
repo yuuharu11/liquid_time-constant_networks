@@ -610,7 +610,7 @@ class SequenceLightningModule(pl.LightningModule):
 
                 # Calculate loss on the replay data
                 # The gradients computed here will be accumulated in the next loss.backward()
-                replay_loss = self._shared_step(replay_batch, batch_idx, prefix="replay")
+                replay_loss = self._shared_step(replay_batch, batch_idx, prefix="train")
 
                 # Sum the two losses
                 loss = loss + replay_loss
