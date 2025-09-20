@@ -69,7 +69,8 @@ train:
   architecture:
     _name_: null # [pnn, packnet]Architecture specific modifications to the model
     pruning_rate: 0.0 # Pruning rate for PackNet, only used if architecture is packnet
-
+    mask_path: null # Path to the masks for PackNet, if not specified, it will be created in the current directory
+    
 
 tolerance: # fault tolerance for training on preemptible machines
   logdir: ./resume

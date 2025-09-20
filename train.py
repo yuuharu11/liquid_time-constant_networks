@@ -270,21 +270,21 @@ class SequenceLightningModule(pl.LightningModule):
                 self.model.freeze_previous_columns()
 
         elif self.arch_name == "packnet":
-            if not hasattr(self, "previous_masks"):
+            self.mask_path = self.hparams.train.architecture.get("mask_path", None)
+            if self.mask_path and os.path.exists(self.mask_path):
+                print(f"[cyan]Loading previous masks from: {self.mask_path}[/cyan]")
+                self.previous_masks = torch.load(self.mask_path)
+                print(f"[green]Previous masks loaded. Current size: {len(self.previous_masks)}[/green]")
+            else:
                 self.previous_masks = {}
-            self.model = SparsePruner(
+            self.pruner = SparsePruner(
                 self.model,
-                pruning_rate=self.hparams.train.architecture.get("pruning_rate", 0.5),
+                prune_perc=self.hparams.train.architecture.get("pruning_rate", 0.5),
                 previous_masks=self.previous_masks,
                 train_bias=True,
                 train_bn=True,
                 )
             print(f"[green]Initialized PackNet with pruning rate {self.hparams.train.architecture.get('pruning_rate', 0.5)}[/green]")
-            if self.task_id > 0:
-                self.model.prune()
-                self.model.make_pruned_zero()
-            self.model.make_finetuning_mask()
-            self.previous_masks = self.model.current_masks
 
     # Add: function to compute Fisher matrix for ewc
     def _compute_fisher_matrix(self, max_samples: Optional[int] = None):
@@ -613,13 +613,16 @@ class SequenceLightningModule(pl.LightningModule):
                 os.makedirs(os.path.dirname(self.param_path), exist_ok=True)
                 torch.save(self.ewc_params, self.param_path)
                 print(f"[green]EWC parameters saved to {self.param_path}[/green]")
+        
         elif self.arch_name=="packnet":
             print(f"[green]Pruning and freezing weights for PackNet...[/green]")
             print(f"[green]PackNet weights pruned and frozen for task {self.task_id}.[/green]")
-            self.model.prune()
-            self.previous_masks = self.model.current_masks
-            self.model.make_finetuning_mask()
+            self.pruner.prune()
+            self.previous_masks = self.pruner.current_masks
+            self.pruner.make_finetuning_mask()
             print(f"[PackNet] Task {self.task_id} pruning finalized.")
+            torch.save(self.previous_masks, self.mask_path)
+            print(f"[green]PackNet masks saved to {self.mask_path}[/green]")
 
     def training_step(self, batch, batch_idx):
         loss = self._shared_step(batch, batch_idx, prefix="train")

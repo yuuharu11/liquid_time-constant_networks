@@ -1,4 +1,4 @@
 _name_: uci_har
 val_split: 0.2
 seed: 0
-loso_subject: null 
+d_output: 6

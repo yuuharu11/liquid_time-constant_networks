@@ -4,3 +4,4 @@ seed: 42
 task_id: 0
 noise_level: 0.0
 joint_training: False
+d_output: 6

@@ -2,12 +2,12 @@
 set -e
 
 # --- 実験設定 ---
-MODELS=("rnn" "lstm" "cnn" "ltc_ncps")
+MODELS=("ltc_ncps")
 EXPERIMENT_BASE="uci_har"
 WANDB_PROJECT="UCI-HAR-CIL_EACH"
 NUM_TASKS=3
-NUM_RUNS=5   # ← 5回実験
-SEEDS=(1 2 3 4 5)  # ← 5つの異なるシード値
+NUM_RUNS=5   
+SEEDS=(1)  
 for MODEL in "${MODELS[@]}"; do
   for SEED in "${SEEDS[@]}"; do
     echo "##################################################################"
@@ -17,10 +17,13 @@ for MODEL in "${MODELS[@]}"; do
     echo "=== Running CIL experiments for model: $MODEL (seed=$SEED) ==="
     echo "=================================================================="
 
-    RESULTS_DIR="/work/outputs/${MODEL}/uci_har/cil_each/seed_${SEED}"
-    CSV_LOG_PATH="/work/csv/uci-har/cil_each/${MODEL}/seed${SEED}.csv"
+    #RESULTS_DIR="/work/outputs/${MODEL}/uci_har/cil_each/seed_${SEED}"
+    #CSV_LOG_PATH="/work/csv/uci-har/cil_each/${MODEL}/seed${SEED}.csv"
+    RESULTS_DIR="/work/outputs/tmp/${MODEL}_cil_each_seed${SEED}"  # 一時的にtmpに保存
+    CSV_LOG_PATH="/work/csv/tmp/${MODEL}_cil_each_seed${SEED}.csv"  # 一時的にtmpに保存
     GROUP_NAME="${MODEL^^}-CIL"
     LAST_CHECKPOINT_PATH="null"
+    D_OUTPUT=2
 
     # --- CIL タスクループ ---
     for i in $(seq 0 $(($NUM_TASKS - 1))); do
@@ -35,14 +38,12 @@ for MODEL in "${MODELS[@]}"; do
         train.seed=$SEED \
         dataset.seed=$SEED \
         dataset.task_id=$i \
+        dataset.d_output=$D_OUTPUT \
         train.pretrained_model_path=$LAST_CHECKPOINT_PATH \
-        train.test=true \
+        train.pretrained_model_strict_load=false \
         trainer.max_epochs=$EPOCHS \
         hydra.run.dir=$OUTPUT_DIR \
-        wandb.project=$WANDB_PROJECT \
-        wandb.group=$GROUP_NAME \
-        wandb.name="${MODEL^^}-${TASK_NAME}-seed${SEED}" \
-        callbacks.experiment_logger.output_file=$CSV_LOG_PATH
+        callbacks.experiment_logger.output_file=$CSV_LOG_PATH 
 
       CHECKPOINT_JUST_TRAINED="${OUTPUT_DIR}/checkpoints/last.ckpt"
       LAST_CHECKPOINT_PATH=$CHECKPOINT_JUST_TRAINED
@@ -70,12 +71,14 @@ for MODEL in "${MODELS[@]}"; do
         experiment=${MODEL}/${EXPERIMENT_BASE} \
         dataset=uci_har_cil \
         train.seed=$SEED \
+        dataset.d_output=$D_OUTPUT \
         dataset.seed=$SEED \
         dataset.task_id=$i \
         dataset.overall=true \
         train.pretrained_model_path=$CHECKPOINT_JUST_TRAINED \
         train.test_only=true \
         callbacks.experiment_logger.output_file=$CSV_LOG_PATH
+      D_OUTPUT=$((D_OUTPUT + 2))  # 次のタスクのクラス数に更新
     done
   done
 done

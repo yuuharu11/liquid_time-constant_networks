@@ -11,11 +11,12 @@ class UCIHAR_CIL(SequenceDataset):
     l_output = 0 #絶対に必要 ないとdecoderでエラーが出る
     L = 128
 
-    def __init__(self, data_dir=None, val_split=0.2, seed=42, task_id=0, overall=False, **kwargs):
+    def __init__(self, data_dir=None, val_split=0.2, seed=42, task_id=0, d_output=6, overall=False, **kwargs):
         self.data_dir = data_dir
         self.val_split = val_split
         self.seed = seed
         self.task_id = task_id
+        self.d_output = d_output
         self.overall = overall
 
         # --- CILシナリオの定義 ---
