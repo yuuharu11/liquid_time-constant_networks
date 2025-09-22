@@ -21,11 +21,6 @@ class WeightVisualizerCallback(Callback):
                 continue
 
             weights = param.data.clone().cpu().numpy()
-            # マスクはパラメータ名で取得（PackNetのcurrent_masksのキーがparam名の場合）
-            mask = pl_module.pruner.current_masks.get(name)
-            if mask is None:
-                continue
-            mask = mask.clone().cpu().numpy()
 
             # Figure作成
             fig, axes = plt.subplots(1, 2, figsize=(12, 5))
@@ -35,11 +30,7 @@ class WeightVisualizerCallback(Callback):
             axes[0].set_title('Weights')
             axes[0].set_xlabel('Flattened')
             axes[0].set_ylabel('Rows')
-
-            sns.heatmap(mask.reshape(mask.shape[0], -1), ax=axes[1], cmap='tab10', cbar=True)
-            axes[1].set_title('PackNet Mask (Task IDs)')
-            axes[1].set_xlabel('Flattened')
-
+            
             plt.tight_layout(rect=[0, 0, 1, 0.96])
 
             trainer.logger.experiment.log({
