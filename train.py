@@ -7,6 +7,7 @@ from functools import partial, wraps
 from typing import Callable, List, Optional
 from src.callbacks.experiment_logger import TrainingMonitor, InferenceMonitor, CSVSummaryCallback 
 from src.callbacks.memory_profiler import ProfilerCallback 
+from src.callbacks.weight_visualizer import WeightVisualizerCallback
 
 
 import hydra
@@ -891,6 +892,7 @@ def create_trainer(config, **kwargs):
     callbacks.append(InferenceMonitor())
     callbacks.append(TrainingMonitor())
     callbacks.append(CSVSummaryCallback(config.callbacks.experiment_logger.output_file))
+    callbacks.append(WeightVisualizerCallback())
     """
     if config.callbacks.memory_profiler.enable_callback:
         callbacks.append(
