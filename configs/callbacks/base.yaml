@@ -34,3 +34,6 @@ memory_profiler:
   profile_memory: false
   with_stack: false
   output_dir: null
+
+weight_visualizer:
+  log_every_n_epochs: 10
