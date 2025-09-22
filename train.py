@@ -8,7 +8,7 @@ from typing import Callable, List, Optional
 from src.callbacks.experiment_logger import TrainingMonitor, InferenceMonitor, CSVSummaryCallback 
 from src.callbacks.memory_profiler import ProfilerCallback 
 from src.callbacks.weight_visualizer import WeightVisualizerCallback
-
+from src.callbacks.weight_change_visualizer import WeightChangeVisualizerCallback
 
 import hydra
 import numpy as np
@@ -893,6 +893,7 @@ def create_trainer(config, **kwargs):
     callbacks.append(TrainingMonitor())
     callbacks.append(CSVSummaryCallback(config.callbacks.experiment_logger.output_file))
     callbacks.append(WeightVisualizerCallback())
+    callbacks.append(WeightChangeVisualizerCallback(config.callbacks.weight_change_visualizer.enable))
     """
     if config.callbacks.memory_profiler.enable_callback:
         callbacks.append(

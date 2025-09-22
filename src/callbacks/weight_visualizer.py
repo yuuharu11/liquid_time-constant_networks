@@ -24,13 +24,18 @@ class WeightVisualizerCallback(Callback):
 
             # Figure作成
             fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-            fig.suptitle(f'{name} | Epoch {trainer.current_epoch + 1}', fontsize=16)
+            fig.suptitle(f'{name} | Training End', fontsize=16)
 
             sns.heatmap(weights.reshape(weights.shape[0], -1), ax=axes[0], cmap='viridis', cbar=False)
             axes[0].set_title('Weights')
             axes[0].set_xlabel('Flattened')
             axes[0].set_ylabel('Rows')
-            
+
+            axes[1].hist(weights.flatten(), bins=50, color='blue', alpha=0.7)
+            axes[1].set_title('Weights Histogram')
+            axes[1].set_xlabel('Weight Value')
+            axes[1].set_ylabel('Frequency')
+
             plt.tight_layout(rect=[0, 0, 1, 0.96])
 
             trainer.logger.experiment.log({

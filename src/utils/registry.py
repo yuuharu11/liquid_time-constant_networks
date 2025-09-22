@@ -61,4 +61,5 @@ callbacks = {
     "experiment_logger": "src.callbacks.experiment_logger.CSVSummaryCallback",
     "memory_profiler": "src.callbacks.memory_profiler.ProfilerCallback",
     "weight_visualizer": "src.callbacks.weight_visualizer.WeightVisualizerCallback",
+    "weight_change_visualizer": "src.callbacks.weight_change_visualizer.WeightChangeVisualizerCallback",
 }
