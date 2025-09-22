@@ -95,29 +95,6 @@ class UCIHAR_DIL(SequenceDataset):
             
             print(f"--- Joint training dataset created. Total samples: {len(X_train)} ---")
 
-
-            """ ノイズdil
-            t = self.task_id
-            current_nl = self.noise_level
-
-            X_train_list, X_test_list, y_train_list, y_test_list = [], [], [], []
-            
-            # ノイズを0まで0.1刻みで減らしながら複製
-            while current_nl >= 0:
-                x_train_tmp = self._apply_noise(X_train_clean, t, current_nl) if current_nl > 0 else X_train_clean
-                x_test_tmp = self._apply_noise(X_test_clean, t, current_nl) if current_nl > 0 else X_test_clean
-                X_train_list.append(x_train_tmp)
-                X_test_list.append(x_test_tmp)
-                y_train_list.append(y_train)
-                y_test_list.append(y_test)
-                current_nl = round(current_nl - 0.1, 1)  
-
-            # まとめて連結
-            X_train = np.concatenate(X_train_list, axis=0)
-            X_test = np.concatenate(X_test_list, axis=0)
-            y_train = np.concatenate(y_train_list, axis=0)
-            y_test = np.concatenate(y_test_list, axis=0)
-            """
         else:
             if self.noise_level > 0:
                 print(f"Applying Gaussian noise (level: {self.noise_level}) to sensor group {self.task_id}...")
