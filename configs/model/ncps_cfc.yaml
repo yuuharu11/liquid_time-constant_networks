@@ -1,0 +1,9 @@
+_name_: cfc
+units: 
+  - name: AutoNCP
+  - units: 20
+  - output_units: 10
+return_sequences: True
+mixed_memory: False
+batch_first: True
+proj_size: null

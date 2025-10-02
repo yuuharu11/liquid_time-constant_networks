@@ -7,7 +7,6 @@ n_layers: 1
 d_model: 28
 prenorm: true
 transposed: false
-residual: null
 pool:
   _name_: pool
   stride: 1
@@ -15,4 +14,4 @@ pool:
 norm: layer
 dropout: 0.0
 tie_dropout: false
-track_norms: true # Logs to wandb
+track_norms: true 

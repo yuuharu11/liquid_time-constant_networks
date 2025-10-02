@@ -1,0 +1,37 @@
+# @package _global_
+defaults:
+  - /trainer: default
+  - /model: ncps_cfc
+  - /loader: default
+  - /dataset: uci_har_dil
+  - /task: multiclass_classification
+  - /optimizer: adamw
+  - /scheduler: cosine_warmup
+
+train:
+  monitor: val/accuracy 
+  mode: max
+
+encoder: 
+  _name_: id
+  
+decoder:
+  _name_: id
+
+model:
+  input_size: 9
+  units: 
+  - name: AutoNCP
+  - units: 110
+  - output_units: 6
+
+loader:
+  batch_size: 200     
+
+optimizer:
+  lr: 5e-3
+  weight_decay: 0.01
+
+scheduler:
+  num_warmup_steps: 100
+  num_training_steps: 1500

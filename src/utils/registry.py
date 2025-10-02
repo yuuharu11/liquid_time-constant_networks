@@ -12,6 +12,7 @@ model = {
     "cnn_pamap2": "src.models.sequence.cnns.cnn_pamap2.CNN_PAMAP2",
     "cnn_har": "src.models.sequence.cnns.cnn_har.CNN_UCI",
     "pnn": "src.models.sequence.pnn.PNN",
+    "cfc": "src.models.ncps.cfc.CfC",
 }
 
 wirings = {

@@ -2,11 +2,11 @@
 set -e
 
 # --- 実験設定: モデルとタスク ---
-MODEL_NAMES=("LTC_NCPS")
+MODEL_NAMES=("NCP")
 EXPERIMENT_BASE="uci_har"
 RESULTS_BASE="/work/outputs"
-CSV_BASE="/work/csv/uci-har/base-noise" # 結果の保存先
-SEED=42
+CSV_BASE="/work/csv/temp" # 結果の保存先
+SEED=1
 
 # --- テストするノイズレベルのリスト ---
 NOISE_LEVELS=("0.0" "0.1" "0.2" "0.3" "0.4" "0.5" "0.6" "0.7" "0.8" "0.9" "1.0" "1.2" "1.4" "1.6" "1.8" "2.0")
@@ -25,7 +25,7 @@ for MODEL_NAME in "${MODEL_NAMES[@]}"; do
     echo "=================================================================="
 
     # --- Task ID ループ (0から6まで) ---
-    for task_id in {5..6}; do
+    for task_id in {0..6}; do
 
         echo "-----------------------------------------------------"
         echo "--- Evaluating for Task ID: ${task_id} (Sensor Group ${task_id})"

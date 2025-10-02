@@ -19,7 +19,7 @@ from typing import Optional, Union
 import ncps
 from .cells import CfCCell, WiredCfCCell
 from .lstm import LSTMCell
-
+from src.models.wirings import AutoNCP
 
 class CfC(nn.Module):
     def __init__(
@@ -59,16 +59,20 @@ class CfC(nn.Module):
         :param backbone_layers: Number of backbone layers (default 1)
         :param backbone_dropout: Dropout rate in the backbone layers (default 0)
         """
-
         super(CfC, self).__init__()
-        self.input_size = input_size
         self.wiring_or_units = units
         self.proj_size = proj_size
         self.batch_first = batch_first
         self.return_sequences = return_sequences
 
-        if isinstance(units, ncps.wirings.Wiring):
+        self.wiring_name = next((item for item in units if "name" in item), None)['name']
+        self.hidden_units = next((item for item in units if "units" in item), None)['units']
+        self.output_units = next((item for item in units if "output_units" in item), None)['output_units']
+                                  
+        # change for instance of AutoNCP
+        if self.wiring_name == 'AutoNCP':
             self.wired_mode = True
+            print(f"Use AutoNCP(units: {self.hidden_units}, outputs: {self.output_units})")
             if backbone_units is not None:
                 raise ValueError(f"Cannot use backbone_units in wired mode")
             if backbone_layers is not None:
@@ -76,30 +80,15 @@ class CfC(nn.Module):
             if backbone_dropout is not None:
                 raise ValueError(f"Cannot use backbone_dropout in wired mode")
             # self.rnn_cell = WiredCfCCell(input_size, wiring_or_units)
-            self.wiring = units
-            self.state_size = self.wiring.units
-            self.output_size = self.wiring.output_dim
+            wiring = ncps.wirings.AutoNCP(self.hidden_units, self.output_units)
+            self._wiring = wiring
             self.rnn_cell = WiredCfCCell(
-                input_size,
-                self.wiring_or_units,
-                mode,
+                input_size=input_size,
+                wiring=wiring,
+                mode=mode,
             )
         else:
-            self.wired_false = True
-            backbone_units = 128 if backbone_units is None else backbone_units
-            backbone_layers = 1 if backbone_layers is None else backbone_layers
-            backbone_dropout = 0.0 if backbone_dropout is None else backbone_dropout
-            self.state_size = units
-            self.output_size = self.state_size
-            self.rnn_cell = CfCCell(
-                input_size,
-                self.wiring_or_units,
-                mode,
-                activation,
-                backbone_units,
-                backbone_layers,
-                backbone_dropout,
-            )
+            raise ValueError(f"Only AutoNCP is supported for wired mode, got {self.wiring_name}")
         self.use_mixed = mixed_memory
         if self.use_mixed:
             self.lstm = LSTMCell(input_size, self.state_size)
@@ -109,7 +98,11 @@ class CfC(nn.Module):
         else:
             self.fc = nn.Linear(self.output_size, self.proj_size)
 
-    def forward(self, input, hx=None, timespans=None):
+    @property
+    def state_size(self):
+        return self._wiring.units
+
+    def forward(self, input, hx=None, timespans=None, **kwargs):
         """
 
         :param input: Input tensor of shape (L,C) in batchless mode, or (B,L,C) if batch_first was set to True and (L,B,C) if batch_first is False
