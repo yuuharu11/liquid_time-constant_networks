@@ -95,6 +95,7 @@ class CfC(nn.Module):
 
         if proj_size is None:
             self.fc = nn.Identity()
+            print("No projection layer (proj_size is None)")
         else:
             self.fc = nn.Linear(self.output_size, self.proj_size)
 
