@@ -31,7 +31,6 @@ layer = {
     "cfc": "src.models.ncps.cfc.CfC",
     "wired_cfc": "src.models.ncps.wired_cfc.WiredCfC",
     "cnn": "src.models.sequence.cnns.cnn.CNN",
-    "cfc_parallel": "src.models.ncps.cfc_parallel.Cfc",
 }
 
 cell = {
@@ -40,7 +39,6 @@ cell = {
     "ncps_ltc": "src.models.ncps.cells.ltc_cell.LTCCell",
     "cfc": "src.models.ncps.cells.cfc_cell.CfCCell",
     "wired_cfc": "src.models.ncps.cells.wired_cfc_cell.WiredCfCCell",
-    "cfc_parallel": "src.models.ncps.cells.cfc_parallel.ParallelCfCCell",
 }
 
 task = {
@@ -65,5 +63,5 @@ callbacks = {
     "memory_profiler": "src.callbacks.memory_profiler.ProfilerCallback",
     "weight_visualizer": "src.callbacks.weight_visualizer.WeightVisualizerCallback",
     "weight_change_visualizer": "src.callbacks.weight_change_visualizer.WeightChangeVisualizerCallback",
-    "profiler": "src.callbacks.profiling.ProfilingCallback",
+    "profiler": "src.callbacks.profiler.ProfilingCallback",
 }

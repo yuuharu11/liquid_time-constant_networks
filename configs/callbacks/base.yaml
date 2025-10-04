@@ -38,7 +38,7 @@ memory_profiler:
 weight_change_visualizer:
   enable: false
 
-profiling:
+profiler:
   warmup_steps: 1
   active_steps: 1
   dirpath: /work/logs/profiler
