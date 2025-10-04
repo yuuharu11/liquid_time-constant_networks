@@ -42,4 +42,4 @@ profiling:
   warmup_steps: 1
   active_steps: 1
   dirpath: /work/profiler
-  enable: false
+  enable: False

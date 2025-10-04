@@ -12,7 +12,7 @@ class ProfilingCallback(Callback):
     最初の数ステップの詳細なプロファイル情報をTensorBoard用に保存するCallback。
     """
 
-    def __init__(self, warmup_steps=1, active_steps=1, dirpath="profiler_logs"):
+    def __init__(self, warmup_steps=1, active_steps=1, dirpath="profiler_logs", enable=False):
         super().__init__()
         self.warmup_steps = warmup_steps
         self.active_steps = active_steps
