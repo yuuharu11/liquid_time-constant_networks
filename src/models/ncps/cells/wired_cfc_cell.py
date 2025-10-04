@@ -6,9 +6,9 @@ from torch import nn
 
 from . import CfCCell
 from typing import Optional, Union
+from ...sequence import SequenceModule
 
-
-class WiredCfCCell(nn.Module):
+class WiredCfCCell(SequenceModule):
     def __init__(
         self,
         input_size,

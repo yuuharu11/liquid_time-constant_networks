@@ -22,9 +22,10 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 from typing import Optional, Union
+from ...sequence import SequenceModule
 
 
-class LeCun(nn.Module):
+class LeCun(SequenceModule):
     def __init__(self):
         super(LeCun, self).__init__()
         self.tanh = nn.Tanh()
@@ -33,7 +34,7 @@ class LeCun(nn.Module):
         return 1.7159 * self.tanh(0.666 * x)
 
 
-class CfCCell(nn.Module):
+class CfCCell(SequenceModule):
     def __init__(
         self,
         input_size,

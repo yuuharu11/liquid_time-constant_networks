@@ -20,8 +20,9 @@ import ncps
 from .cells import CfCCell, WiredCfCCell
 from .lstm import LSTMCell
 from src.models.wirings import AutoNCP
+from ..sequence import SequenceModule
 
-class CfC(nn.Module):
+class CfC(SequenceModule):
     def __init__(
         self,
         input_size: Union[int, ncps.wirings.Wiring],
@@ -35,6 +36,9 @@ class CfC(nn.Module):
         backbone_units: Optional[int] = None,
         backbone_layers: Optional[int] = None,
         backbone_dropout: Optional[int] = None,
+        # Edit: SequenceModule specific
+        dropout: float = 0.0,
+        transposed: bool = False,
     ):
         """Applies a `Closed-form Continuous-time <https://arxiv.org/abs/2106.13898>`_ RNN to an input sequence.
 
@@ -60,6 +64,7 @@ class CfC(nn.Module):
         :param backbone_dropout: Dropout rate in the backbone layers (default 0)
         """
         super(CfC, self).__init__()
+        self.input_size = input_size
         self.wiring_or_units = units
         self.proj_size = proj_size
         self.batch_first = batch_first
@@ -102,6 +107,15 @@ class CfC(nn.Module):
     @property
     def state_size(self):
         return self._wiring.units
+    
+    # Edit: SequenceModule specific
+    @property
+    def output_size(self):
+        return self._wiring.output_dim
+    
+    @property
+    def d_output(self):
+        return self.output_size
 
     def forward(self, input, hx=None, timespans=None, **kwargs):
         """

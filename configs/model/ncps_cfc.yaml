@@ -1,9 +1,18 @@
-_name_: cfc
-units: 
-  - name: AutoNCP
-  - units: 20
-  - output_units: 10
-return_sequences: False
-mixed_memory: False
-batch_first: True
-proj_size: null
+defaults:
+  - layer: ncps_cfc
+#_target_: src.models.sequence.SequenceModel
+_name_: sequence
+
+n_layers: 1
+d_model: 28
+prenorm: true
+transposed: false
+pool:
+  _name_: pool
+  stride: 1
+  expand: 1
+norm: layer
+dropout: 0.0
+tie_dropout: false
+track_norms: true 
+

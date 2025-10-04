@@ -13,17 +13,20 @@ train:
   mode: max
 
 encoder: 
-  _name_: id
+  _name_: linear
   
 decoder:
-  _name_: id
+  _name_: sequence
+  mode: pool
 
 model:
-  input_size: 9
-  units: 
-  - name: AutoNCP
-  - units: 110
-  - output_units: 6
+  d_model: 9
+  layer:
+    units: 
+    - name: AutoNCP
+    - units: 110
+    - output_units: 6
+    - input_size: 9
 
 loader:
   batch_size: 200     
