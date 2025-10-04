@@ -37,3 +37,9 @@ memory_profiler:
 
 weight_change_visualizer:
   enable: false
+
+profiling:
+  warmup_steps: 1
+  active_steps: 1
+  dirpath: /work/profiler
+  enable: false
