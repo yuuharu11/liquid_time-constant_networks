@@ -1,0 +1,11 @@
+_name_: cfc_parallel
+
+units: 
+  - name: AutoNCP
+  - units: 20
+  - output_units: 10
+  - input_size: 10
+
+return_sequences: True
+mixed_memory: True
+

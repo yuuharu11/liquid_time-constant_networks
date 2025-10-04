@@ -18,7 +18,7 @@ class ProfilingCallback(Callback):
         self.active_steps = active_steps
         self.dirpath = dirpath
         self.profiler = None
-        self.enable = False
+        self.enable = enable
 
     def on_train_start(self, trainer, pl_module):
         """
@@ -79,7 +79,7 @@ class ProfilingCallback(Callback):
                 with_stack=True,
                 profile_memory=True,
             )
-            self.profiler.start()
+            self.profiler.__enter__()
 
         if batch_idx < self.warmup_steps + self.active_steps + 1:
             self.profiler.step()
@@ -87,10 +87,8 @@ class ProfilingCallback(Callback):
     def on_train_end(self, trainer, pl_module):
         """
         トレーニング終了時にプロファイラを停止します。
-        """
-        if not self.enable:
-            return
-        
-        if self.profiler:
-            self.profiler.stop()
+        """        
+        if self.enable and self.profiler:
+            self.profiler.__exit__(None, None, None)
             log.info(f"Profiler trace saved to '{self.dirpath}/trace'. Use TensorBoard to view.")
+            self.enable = False  # 一度だけ実行するために無効化

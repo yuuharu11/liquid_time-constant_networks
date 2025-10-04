@@ -31,14 +31,16 @@ layer = {
     "cfc": "src.models.ncps.cfc.CfC",
     "wired_cfc": "src.models.ncps.wired_cfc.WiredCfC",
     "cnn": "src.models.sequence.cnns.cnn.CNN",
+    "cfc_parallel": "src.models.ncps.cfc_parallel.Cfc",
 }
 
 cell = {
     "rnn": "src.models.sequence.rnns.cells.rnn.RNNCell",
     "ltc": "src.models.ncps.cells.ltc.LTCCell",
-    "ltc_for_ncps": "src.models.ncps.cells.ltc_cell.LTCCell",
+    "ncps_ltc": "src.models.ncps.cells.ltc_cell.LTCCell",
     "cfc": "src.models.ncps.cells.cfc_cell.CfCCell",
     "wired_cfc": "src.models.ncps.cells.wired_cfc_cell.WiredCfCCell",
+    "cfc_parallel": "src.models.ncps.cells.cfc_parallel.ParallelCfCCell",
 }
 
 task = {

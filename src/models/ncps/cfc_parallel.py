@@ -16,8 +16,7 @@ class Cfc(SequenceModule):
         out_feature,
         hparams,
         return_sequences=False,
-        use_mixed=False,
-        use_ltc=False,
+        mixed_memory=False,
     ):
         super(Cfc, self).__init__()
         self.in_features = in_features
@@ -26,8 +25,8 @@ class Cfc(SequenceModule):
         self.return_sequences = return_sequences
 
         self.rnn_cell = CfcCell(in_features, hidden_size, hparams)
-        self.use_mixed = use_mixed
-        if self.use_mixed:
+        self.mixed_memory = mixed_memory
+        if self.mixed_memory:
             self.lstm = LSTMCell(in_features, hidden_size)
         self.fc = nn.Linear(self.hidden_size, self.out_feature)
 
@@ -37,7 +36,7 @@ class Cfc(SequenceModule):
         seq_len = x.size(1)
         true_in_features = x.size(2)
         h_state = torch.zeros((batch_size, self.hidden_size), device=device)
-        if self.use_mixed:
+        if self.mixed_memory:
             c_state = torch.zeros((batch_size, self.hidden_size), device=device)
         output_sequence = []
         if mask is not None:
