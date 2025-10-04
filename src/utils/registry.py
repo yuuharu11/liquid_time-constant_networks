@@ -65,5 +65,5 @@ callbacks = {
     "memory_profiler": "src.callbacks.memory_profiler.ProfilerCallback",
     "weight_visualizer": "src.callbacks.weight_visualizer.WeightVisualizerCallback",
     "weight_change_visualizer": "src.callbacks.weight_change_visualizer.WeightChangeVisualizerCallback",
-    "profiling": "src.callbacks.profiling.ProfilingCallback",
+    "profiler": "src.callbacks.profiling.ProfilingCallback",
 }

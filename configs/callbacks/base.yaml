@@ -41,5 +41,5 @@ weight_change_visualizer:
 profiling:
   warmup_steps: 1
   active_steps: 1
-  dirpath: /work/profiler
+  dirpath: /work/logs/profiler
   enable: False
