@@ -38,8 +38,5 @@ memory_profiler:
 weight_change_visualizer:
   enable: false
 
-profiler:
-  warmup_steps: 1
-  active_steps: 1
-  dirpath: /work/logs/profiler
-  enable: False
+flops_counter:
+  enable: false

@@ -5,10 +5,12 @@ import sys, socket
 import time, datetime
 from functools import partial, wraps
 from typing import Callable, List, Optional
+# import my callback functions
 from src.callbacks.experiment_logger import TrainingMonitor, InferenceMonitor, CSVSummaryCallback 
 from src.callbacks.memory_profiler import ProfilerCallback 
 from src.callbacks.weight_visualizer import WeightVisualizerCallback
 from src.callbacks.weight_change_visualizer import WeightChangeVisualizerCallback
+from src.callbacks.flops_counter import FlopsCounterCallback
 
 import hydra
 import numpy as np
@@ -900,6 +902,7 @@ def create_trainer(config, **kwargs):
     callbacks.append(CSVSummaryCallback(config.callbacks.experiment_logger.output_file))
     callbacks.append(WeightVisualizerCallback())
     callbacks.append(WeightChangeVisualizerCallback(config.callbacks.weight_change_visualizer.enable))
+    callbacks.append(FlopsCounterCallback(config.callbacks.flops_counter.enable))
 
     # add profiler callback
     if config.trainer.profiler_enable:
@@ -915,6 +918,7 @@ def create_trainer(config, **kwargs):
             record_shapes=True,
             profile_memory=True,
             with_stack=True,
+            with_flops=True,
             on_trace_ready=trace_handler(run_dir)
         )
 

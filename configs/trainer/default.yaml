@@ -8,4 +8,4 @@ log_every_n_steps: 10
 limit_train_batches: 1.0   # train on full dataset, can be used to toggle quick run
 limit_val_batches: 1.0     # validate on full dataset, can be used to toggle quick run
 
-profiler_enable: true
+profiler_enable: false
