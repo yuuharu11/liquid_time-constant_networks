@@ -1,8 +1,8 @@
 import copy
 import os
 import random
-import sys
-import time
+import sys, socket
+import time, datetime
 from functools import partial, wraps
 from typing import Callable, List, Optional
 from src.callbacks.experiment_logger import TrainingMonitor, InferenceMonitor, CSVSummaryCallback 
@@ -845,6 +845,12 @@ class SequenceLightningModule(pl.LightningModule):
         return test_loaders
 
 ### pytorch-lightning utils and entrypoint ###
+def trace_handler(run_dir):
+    def handler(prof):
+        print(f"✅ Tracing enabled. Logs will be saved to: {run_dir}")
+        torch.profiler.tensorboard_trace_handler(run_dir)(prof)
+    return handler
+
 def create_trainer(config, **kwargs):
     callbacks: List[pl.Callback] = []
     logger = None
@@ -894,25 +900,37 @@ def create_trainer(config, **kwargs):
     callbacks.append(CSVSummaryCallback(config.callbacks.experiment_logger.output_file))
     callbacks.append(WeightVisualizerCallback())
     callbacks.append(WeightChangeVisualizerCallback(config.callbacks.weight_change_visualizer.enable))
-    """
-    if config.callbacks.memory_profiler.enable_callback:
-        callbacks.append(
-            ProfilerCallback(
-                start_step=config.callbacks.memory_profiler.get("start_step", 10),
-                profile_steps=config.callbacks.memory_profiler.get("profile_steps", 20),
-                record_shapes=config.callbacks.memory_profiler.get("record_shapes", False),
-                profile_memory=config.callbacks.memory_profiler.get("profile_memory", False),
-                with_stack=config.callbacks.memory_profiler.get("with_stack", False),
-                output_dir=config.callbacks.memory_profiler.get("output_dir", None),
-            )
+
+    # add profiler callback
+    if config.trainer.profiler_enable:
+        run_name = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        base_dir = get_original_cwd()
+        run_dir = os.path.join(base_dir, "logs", "profiler", run_name, "plugins", "profile", socket.gethostname())
+        os.makedirs(run_dir, exist_ok=True)
+
+        profiler = PyTorchProfiler(
+            dirpath=run_dir,
+            filename="profile",
+            schedule=torch.profiler.schedule(wait=1, warmup=2, active=3, repeat=1),
+            record_shapes=True,
+            profile_memory=True,
+            with_stack=True,
+            on_trace_ready=trace_handler(run_dir)
         )
-    """
+
+        log.info(f"✅ Profiler enabled. Logs will be saved to: {run_dir}")
+    else:
+        profiler = None
+
     kwargs.update(config.trainer)
+    if "profiler_enable" in kwargs:
+        del kwargs["profiler_enable"]
+
     trainer = pl.Trainer(
         logger=logger,
         callbacks=callbacks,
         **kwargs,
-        #profiler=profiler,
+        profiler=profiler,
     )
     return trainer
 

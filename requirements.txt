@@ -26,4 +26,8 @@ opt_einsum
 ptflops
 
 ncps
-tensorflow
+
+# ---TensorFlow関連---
+tensorflow==2.14.0
+tensorboard==2.14.1
+protobuf==3.20.3

@@ -27,7 +27,7 @@ layer = {
     "rnn": "src.models.sequence.rnns.rnn.RNN",
     "rnn_original": "src.models.sequence.rnns.rnn_original.RNN",
     "lstm": "src.models.baseline.lstm.TorchLSTM",
-    "ltc_for_ncps": "src.models.ncps.ltc.LTC",
+    "ncps_ltc": "src.models.ncps.ltc.LTC",
     "cfc": "src.models.ncps.cfc.CfC",
     "wired_cfc": "src.models.ncps.wired_cfc.WiredCfC",
     "cnn": "src.models.sequence.cnns.cnn.CNN",
