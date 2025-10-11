@@ -5,6 +5,9 @@ units:
   - units: 20
   - output_units: 10
   - input_size: 10
+  - backbone_units: 0
+  - backbone_layers: 0
+  - backbone_dropout: 0.0
 
 return_sequences: True
 mixed_memory: True
